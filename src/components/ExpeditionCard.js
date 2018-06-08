@@ -3,7 +3,7 @@ import { Text, View, Image, TouchableOpacity } from 'react-native';
 import { Card, CardSection } from './common';
 
 const ExpeditionCard = ({ expedition, navigation }) => {
-  const { title, artist, thumbnail_image } = expedition;
+  const { id, name } = expedition;
   const { thumbnailStyle,
           headerContentStyle,
           thumbnailContainerStyle,
@@ -14,18 +14,19 @@ const ExpeditionCard = ({ expedition, navigation }) => {
     <TouchableOpacity
     onPress={() => {
                navigation.navigate('Details', {
-                  titleExpedition: title,
+                  titleExpedition: name,
               });
             }}
     >
       <Card>
         <CardSection>
-          <View style={thumbnailContainerStyle} >
-            <Image style={thumbnailStyle} source={{ uri: thumbnail_image }} />
-          </View>
+          {//<View style={thumbnailContainerStyle} >
+          //  <Image style={thumbnailStyle} source={{ uri: thumbnail_image }} />
+          //</View>
+          }
           <View style={headerContentStyle} >
-            <Text style={headerTextStyle}>{title}</Text>
-            <Text>{artist}</Text>
+            <Text style={headerTextStyle}>{name}</Text>
+            <Text>{id}</Text>
           </View>
         </CardSection>
       </Card>

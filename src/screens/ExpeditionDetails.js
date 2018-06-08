@@ -1,4 +1,3 @@
-import axios from 'axios';
 import React, { Component } from 'react';
 import { View, Text } from 'react-native';
 import Modal from 'react-native-modal';
@@ -6,61 +5,109 @@ import { Container, Content, Button, Icon } from 'native-base';
 import { Card, CardSection } from '../components/common';
 import { SwipableExpeditionCard } from '../components/SwipableExpeditionCard';
 import { FormExpedition } from '../components/FormExpedition';
+// функция, която връща следващ идентификатор за запис в базата
+import { NewExpeditionID } from '../components/RealmSchema';
+// функция, която връща форматирана за изобразяване дата
+import { getFormattedDate } from '../components/utilities';
+
+
+// props, които се подават на компонента през react-navigation:
+// this.props.navigation.getParam(expeditionID) - ID на издирването в базата
+// this.props.navigation.getParam(objExpedition) - обект, според схемата,
+//                            съдържащ издирване със съответното ID
+// this.props.navigation.getParam(titleExpedition) -  името на издирването
+
 
 class ExpeditionDetails extends Component {
-
+  // Текстът-заглавие в навигационната лента (горе на екрана)
   static navigationOptions = ({ navigation }) => ({
-      title: navigation.getParam('headerTitle', ''),
+      title: navigation.getParam('titleExpedition', 'Ново издирване'),
     });
 
-  state = { expeditions: [], isModalVisible: false };
+  state = { expeditionTitle: '',
+            startDate: '',
+            leaderName: '',
+            recordMode: '',
+            expeditionID: '',
+            tracks: [],
+            isModalVisible: false };
 
-  componentWillMount() {
-    axios.get('https://rallycoding.herokuapp.com/api/music_albums')
-      .then(response => this.setState({ expeditions: response.data }));
+  componentDidMount() {
+    const titleExpedition = this.props.navigation.getParam('titleExpedition', 'Ново издирване');
+
+    if (titleExpedition === 'Ново издирване') {
+      //expeditionID: NewExpeditionID() // взема следващ идентификатор за запис в базата
+      this.setState({ expeditionID: NewExpeditionID(), recordMode: 1 });
+    } else {
+      const expedition = this.props.navigation.getParam('objExpedition');
+      //Поема обект от типа Expedition, подаден за редакция на запис в базата 
+      this.setState({ startDate: getFormattedDate(expedition.startDate),
+                      leaderName: expedition.leaderName,
+                      recordMode: 2,
+                      expeditionID: this.props.navigation.getParam('expID'),
+       });
+    }
   }
 
+  // Превключва модален прозорец
   toggleModal = () =>
   this.setState({ isModalVisible: !this.state.isModalVisible });
 
+  // Определя параметри и подава към форма за редактиране на данните
+  // за издирването(модален прозорец)
   renderModalEditExpedition() {
       return (
-      <Modal isVisible={this.state.isModalVisible}>
-        <FormExpedition closeModal={this.toggleModal.bind(this)} />
-      </Modal>
+        <FormExpedition
+          closeModal={this.toggleModal.bind(this)}
+          expeditionID={this.state.expeditionID}
+          recordMode={this.state.recordMode}
+          regionZoom={regionZoom}
+          regionCoordinates={regionCoordinates}
+          regionFeatures={regionFeatures}
+        />
     );
   }
 
+// Рендва карта за вход във формата за редактиране на данните за издиравне
   renderCardEditExpedition() {
     const title = this.props.navigation.getParam('titleExpedition', 'NO-ID');
-
     return (
       <Card>
         <CardSection style={{ justifyContent: 'space-between' }}>
           <View style={thumbnailContainerStyle} >
-            <Icon ios='ios-bookmark' android='md-bookmark' style={{ fontSize: 50, color: 'navy' }} />
+            <Icon
+              ios='ios-bookmark'
+              android='md-bookmark'
+              style={{ fontSize: 50, color: 'navy' }}
+            />
           </View>
           <View style={headerContentStyle} >
             <Text style={headerTextStyle}>{title}</Text>
-            <Text>{ 'Начало: 18.05.2018 г. '}</Text>
-            <Text>{ 'Ръководител: Иван Иванов '}</Text>
+            <Text>{ `Начало: ${this.state.startDate}`}</Text>
+            <Text>{ `Ръководител: ${this.state.leaderName}`}</Text>
           </View>
           <Button transparent onPress={this.toggleModal}>
-            <Icon ios='ios-more' android='md-more' style={{ fontSize: 50, color: 'tomato' }} />
+            <Icon
+              ios='ios-more'
+              android='md-more'
+              style={{ fontSize: 50, color: 'tomato' }}
+            />
           </Button>
         </CardSection>
       </Card>
     );
   }
 
-  renderExpeditions() {
-    return this.state.expeditions.map(expedition =>
-      <SwipableExpeditionCard
-        key={expedition.title}
-        expedition={expedition}
-        navigation={this.props.navigation}
-      />
-    );
+  renderTracks() {
+    if (this.state.tracks) {
+      //return this.state.tracks.map(track =>
+        //<SwipableExpeditionCard
+        //  key={track.id}
+        //  expedition={expedition}
+        //  navigation={this.props.navigation}
+        ///>
+      //);
+    }
   }
 
   render() {
@@ -73,10 +120,12 @@ class ExpeditionDetails extends Component {
               <Text style={headerTextStyle}>{' Записани тракове: '}</Text>
             </View>
             <Content style={contentViewStyle}>
-              {this.renderExpeditions()}
+              {this.renderTracks()}
             </Content>
             <View>
-              {this.renderModalEditExpedition()}
+              <Modal isVisible={this.state.isModalVisible}>
+                {this.renderModalEditExpedition()}
+              </Modal>
             </View>
         </Container>
     );
@@ -127,6 +176,10 @@ const styles = {
     marginRight: 15
   },
 };
+
+const regionZoom = 5;
+const regionCoordinates = '';
+const regionFeatures = '';
 
 const { headerContentStyle,
         thumbnailContainerStyle,

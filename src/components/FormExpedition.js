@@ -5,24 +5,71 @@ import { Container,
           Button,
           Spinner, DatePicker,
           Form, Item, Input, Label, Text } from 'native-base';
+import Realm from 'realm';
+import { realm } from '../components/RealmSchema';
+
+// props, които се подават на компонента:
+// this.props.expeditionID - ID на експедицията в базата
+// this.props.recordMode - 1 за нов запис, 2 за редакция на съществуващ
+// this.props.regionZoom - zoom level, 'double'
+// this.props.regionCoordinates -  'string'
+// this.props.regionFeatures - 'string'
 
 class FormExpedition extends Component {
-  state = { expeditionTitle: 'Име на експедицията',
+  state = { expeditionTitle: '',
             leaderName: '',
             dateStart: '',
+            numberOfDays: '',
             regionCoordinates: '',
             regionFeatures: '',
+            regionDescription: '',
+            dataMode: '',
             error: '',
             loading: false };
+
+  componentDidMount() {
+    if (this.props.recordMode === 2) {
+      try {
+        const currExpedition =
+        realm.objects('Expedition').filtered(`id=${this.props.expeditionID.toString()}`)[0];
+        this.setState({ error: '',
+                        loading: false,
+                        expeditionTitle: currExpedition.expeditionName,
+                        leaderName: currExpedition.leaderName,
+                        dateStart: currExpedition.startDate,
+                        numberOfDays: parseInt(currExpedition.days, 10),
+                        regionDescription: currExpedition.regionDescription,
+                       });
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  }
 
   onButtonPress() {
     const { expeditionTitle,
             leaderName,
             dateStart,
+            numberOfDays,
+           } = this.state;
+
+    const { expeditionID,
+            recordMode,
             regionCoordinates,
-            regionFeatures } = this.state;
+            regionFeatures,
+            regionZoom } = this.props;
+
+    const expeditionData = { expeditionID,
+                            expeditionTitle,
+                            leaderName,
+                            dateStart,
+                            numberOfDays,
+                            regionCoordinates,
+                            regionFeatures,
+                            regionZoom };
 
     this.setState({ error: '', loading: true });
+    this.saveExpedition(expeditionData, recordMode);
 
     //some code to put data in db
     //this.onEditFail.bind(this);
@@ -38,7 +85,68 @@ class FormExpedition extends Component {
       loading: false,
       error: ''
     });
+    this.props.closeModal();
   }
+
+  saveExpedition = (expeditionData, recordMode) =>
+  new Promise((resolve, reject) => {
+    const { expeditionID,
+                  expeditionTitle,
+                  leaderName,
+                  dateStart,
+                  numberOfDays,
+                  regionCoordinates,
+                  regionFeatures,
+                  regionZoom,
+                  regionDescription } = expeditionData;
+
+    if (recordMode === 1) { //  нов запис
+      const expeditionRec = {};
+      const dbVersions = realm.objects('AKBdbVersions');
+      expeditionRec.dbVersionIndexAKB = dbVersions.length - 1;
+      //При нова експедиция винаги трябва да се ползва последната версия на базата
+      expeditionRec.regionCoordinates = JSON.stringify(regionCoordinates);
+      expeditionRec.regionZoom = regionZoom;
+      expeditionRec.regionFeatures = regionFeatures;
+      expeditionRec.id = expeditionID;
+      expeditionRec.expeditionName = expeditionTitle;
+      expeditionRec.leaderName = leaderName;
+      expeditionRec.startDate = new Date(dateStart);
+      expeditionRec.days = parseInt(numberOfDays, 10);
+      expeditionRec.regionDescription = regionDescription;
+      expeditionRec.tracks = [];
+      expeditionRec.checkPoints = [];
+      expeditionRec.sinchronized = false;
+
+        try {
+          realm.write(() => {
+            realm.create('Expedition', expeditionRec);
+          });
+
+          resolve(expeditionRec);
+            } catch (e) {
+              reject(e);
+        }
+      } else { // редакция на съществуващ запис
+        try {
+          const currExpedition =
+          realm.objects('Expedition').filtered(`id=${expeditionID.toString()}`)[0];
+          realm.write(() => {
+            currExpedition.expeditionName = expeditionTitle;
+            currExpedition.leaderName = leaderName;
+            currExpedition.startDate = new Date(dateStart);
+            currExpedition.days = parseInt(numberOfDays, 10);
+            currExpedition.regionDescription = regionDescription;
+          });
+
+
+          resolve(currExpedition);
+        } catch (e) {
+
+          reject(e);
+        }
+      }
+  })
 
   renderButton() {
     if (this.state.loading) {

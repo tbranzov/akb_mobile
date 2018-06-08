@@ -1,29 +1,53 @@
-import axios from 'axios';
 import React, { Component } from 'react';
 import { TouchableOpacity, Text, View, ScrollView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Card, CardSection } from '../components/common';
-import ExpeditionCard from '../components/ExpeditionCard';
+import { SwipableExpeditionCard } from '../components/SwipableExpeditionCard';
+import { realm } from '../components/RealmSchema';
 
 class ExpeditionList extends Component {
-
   static navigationOptions = ({ navigation }) => ({
       title: navigation.getParam('headerTitle', 'Издирвания'),
-    });
+  });
 
-  state = { expeditions: [] };
+  state = { expeditions: [], isModalVisible: false };
 
-  componentWillMount() {
-    axios.get('https://rallycoding.herokuapp.com/api/music_albums')
-      .then(response => this.setState({ expeditions: response.data }));
+  componentDidMount() {
+    //console.log('regionCoords', this.props.regionCoords);
+    //this.regionCoords = this.props.regionCoords.slice();
+    //this.zoom = this.props.regionZoom;
+
+    //this.regionCoordsDefinition();
+
+    //this.clearDataField();
+    console.log('Starting to read expeditions');
+
+    this.readAllExpeditions();
+
+    //this.setDataFieldsState(false);
   }
+
+readAllExpeditions() {
+  console.log('read all expeditions');
+  return new Promise((resolve, reject) => {
+    try {
+      const expeditions = realm.objects('Expedition').sorted('id', true);
+      console.log('expeditions:', expeditions);
+      this.setState({ expeditions });
+      resolve(true);
+    } catch (e) {
+      console.log(e);
+      reject(e);
+    }
+  });
+}
 
   renderNewExpedition() {
     return (
       <TouchableOpacity
         onPress={() => {
          this.props.navigation.navigate('Details', {
-            titleExpedition: 'Нова експедиция',
+            titleExpedition: 'Ново издирване',
         });
       }}
       >
@@ -34,7 +58,7 @@ class ExpeditionList extends Component {
             </View>
             <View style={headerContentStyle} >
               <Text style={headerTextStyle}>{' Добавете издирване '}</Text>
-              <Text>{ ' Съдържа тракове и други данни '}</Text>
+              <Text>{ ' Съдържа тракове, точки и други данни '}</Text>
             </View>
           </CardSection>
         </Card>
@@ -44,8 +68,8 @@ class ExpeditionList extends Component {
 
   renderExpeditions() {
     return this.state.expeditions.map(expedition =>
-      <ExpeditionCard
-        key={expedition.title}
+      <SwipableExpeditionCard
+        key={expedition.id}
         expedition={expedition}
         navigation={this.props.navigation}
       />);

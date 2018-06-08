@@ -23,9 +23,11 @@
 
 </head>
 <body>
+  <p>No expedition selected</p>
   <div>
-    <button id="hello">Send text to RN</button>
-    <button id="point">Point</button>
+    <!-- <button id="hello">Send text to RN</button> -->
+    <button id="clear" disabled="true">Clear</button>
+    <button id="point" disabled="true">Point</button>
     <input id="track_point" type="checkbox" disabled="true"/>
     <label for="track_point">nearest track point</label>
     <button id="close_overlay" disabled>Close Overlay</button>
@@ -39,13 +41,12 @@
     <button id="event">Emit greeting event to RN</button>
   </div>
 -->
-  <p></p>
   <div id="map" class="map"></div>
   <div id="info" style="display: none;"></div>
   <div>
     <input id="start_tracking" type="checkbox"/>
     <label for="start_tracking">positioning</label>
-    <input id="save_track" type="checkbox"/>
+    <input id="save_track" type="checkbox" disabled="true"/>
     <label for="save_track">save track</label>
   </div>
   <div>
@@ -53,12 +54,12 @@
     <input id="view_pos_coords" type="checkbox"/>
     <label for="view_pos_coords">pos-coords</label>
     <input id="view_corner_coords" type="checkbox"/>
-    <label for="view_corner_coords">corner-coords</label>
+    <label for="view_corner_coords">region</label>
     <label for="view_track">
-      <input id="view_track" type="checkbox" checked/>
-	  track
+      <input id="view_track" type="checkbox" disabled="true"/>
+	  current track
 	</label>
-    <input id="view_checkpoints" type="checkbox" checked/>
+    <input id="view_checkpoints" type="checkbox" disabled="true"/>
     <label for="view_checkpoints">check-pts</label>
   </div>
   <div>

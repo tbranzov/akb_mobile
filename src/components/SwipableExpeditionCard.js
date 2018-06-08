@@ -1,12 +1,18 @@
 import React, { Component } from 'react';
 import { Alert } from 'react-native';
 import { View, Thumbnail, SwipeRow, Text, Icon, Button, H3 } from 'native-base';
+import { getFormattedDate } from '../components/utilities';
+
+// props, които се подават на компонента:
+// this.props.key - expeditionID - ID на експедицията в базата
+// this.props.expedition - expedition обекта от базата
+// this.props.navigation - референция към навигатора на компонента, който е извикал
 
 class SwipableExpeditionCard extends Component {
   state = { expanded: false };
 
   render() {
-      const { title, artist, thumbnail_image } = this.props.expedition;
+      const { expeditionName, leaderName, startDate, id } = this.props.expedition;
 
       return (
             <SwipeRow
@@ -14,16 +20,27 @@ class SwipableExpeditionCard extends Component {
               rightOpenValue={-75}
 
               left={
-                <Button success onPress={() => Alert.alert('Add')}>
+                <Button
+                success
+                onPress={() => {
+                   this.props.navigation.navigate('Details', {
+                      titleExpedition: expeditionName,
+                      expID: id,
+                      objExpedition: this.props.expedition,
+                  });
+                }}
+                >
                   <Icon active name="add" />
                 </Button>
               }
               body={
                 <View style={containerStyle}>
-                  <Thumbnail square source={{ uri: thumbnail_image }} />
                   <View style={columnStyle}>
-                    <H3>{title}</H3>
-                    <Text>{artist}</Text>
+                    <H3>{getFormattedDate(startDate)}</H3>
+                  </View>
+                  <View style={columnStyle}>
+                    <H3>{expeditionName}</H3>
+                    <Text>{leaderName}</Text>
                   </View>
                 </View>
               }
