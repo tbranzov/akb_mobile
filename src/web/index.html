@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    body {
+		text-align: center;
+    }
+	.overlay {
+		border: 1px solid black;
+		border-radius: 10px 10px 10px 0px;
+		padding: 5px 10px;
+	}
+  </style>
+
+  <!-- <link rel="stylesheet" href="https://openlayers.org/en/v4.4.2/css/ol.css" type="text/css"> -->
+  <link rel="stylesheet" href="openlayers/ol.css" type="text/css">
+
+  <link rel="stylesheet" href="geolocation-style.css" type="text/css">
+
+</head>
+<body>
+  <div>
+    <button id="hello">Send text to RN</button>
+    <button id="point">Point</button>
+    <input id="track_point" type="checkbox" disabled="true"/>
+    <label for="track_point">nearest track point</label>
+    <button id="close_overlay" disabled>Close Overlay</button>
+  </div>
+<!--
+  <div>
+    <button id="json" disabled>Send json to RN</button>
+  </div>
+
+  <div>
+    <button id="event">Emit greeting event to RN</button>
+  </div>
+-->
+  <p></p>
+  <div id="map" class="map"></div>
+  <div id="info" style="display: none;"></div>
+  <div>
+    <input id="start_tracking" type="checkbox"/>
+    <label for="start_tracking">positioning</label>
+    <input id="save_track" type="checkbox"/>
+    <label for="save_track">save track</label>
+  </div>
+  <div>
+    <label style="font-weight: bold;" >view: </label>
+    <input id="view_pos_coords" type="checkbox"/>
+    <label for="view_pos_coords">pos-coords</label>
+    <input id="view_corner_coords" type="checkbox"/>
+    <label for="view_corner_coords">corner-coords</label>
+    <label for="view_track">
+      <input id="view_track" type="checkbox" checked/>
+	  track
+	</label>
+    <input id="view_checkpoints" type="checkbox" checked/>
+    <label for="view_checkpoints">check-pts</label>
+  </div>
+  <div>
+    position accuracy : <code id="accuracy"></code>&nbsp;&nbsp;
+<!--
+    altitude : <code id="altitude"></code>&nbsp;&nbsp;
+    altitude accuracy : <code id="altitudeAccuracy"></code>&nbsp;&nbsp;
+    heading : <code id="heading"></code>&nbsp;&nbsp;
+    speed : <code id="speed"></code>
+-->
+	zoom : <code id="zoom"></code>
+  </div>
+  <div id="onclick_overlay"  class="overlay" style="background-color: white;"/>
+  <div id="coordinate-overlay"/>
+  <div id="toprightoverlay" class="overlay" style="border-radius: 10px 0px 10px 10px;"/>
+  <div id="bottomleftoverlay" class="overlay"/>
+
+  <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x
+  <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>  -->
+    
+  <!-- <script src="https://openlayers.org/en/v4.4.2/build/ol.js"></script> -->
+  <script src="openlayers/ol.js"></script>
+  
+<script type="text/javascript">/******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+/******/
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId]) {
+/******/ 			return installedModules[moduleId].exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			i: moduleId,
+/******/ 			l: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/
+/******/ 		// Flag the module as loaded
+/******/ 		module.l = true;
+/******/
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/
+/******/
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+/******/
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+/******/
+/******/ 	// define getter function for harmony exports
+/******/ 	__webpack_require__.d = function(exports, name, getter) {
+/******/ 		if(!__webpack_require__.o(exports, name)) {
+/******/ 			Object.defineProperty(exports, name, {
+/******/ 				configurable: false,
+/******/ 				enumerable: true,
+/******/ 				get: getter
+/******/ 			});
+/******/ 		}
+/******/ 	};
+/******/
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__webpack_require__.n = function(module) {
+/******/ 		var getter = module && module.__esModule ?
+/******/ 			function getDefault() { return module['default']; } :
+/******/ 			function getModuleExports() { return module; };
+/******/ 		__webpack_require__.d(getter, 'a', getter);
+/******/ 		return getter;
+/******/ 	};
+/******/
+/******/ 	// Object.prototype.hasOwnProperty.call
+/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
+/******/
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "";
+/******/
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var _reactNativeWebviewMessaging=__webpack_require__(1);var _reactNativeWebviewMessaging2=_interopRequireDefault(_reactNativeWebviewMessaging);function _interopRequireDefault(obj){return obj&&obj.__esModule?obj:{default:obj};}var helloBtn=document.querySelector('#hello');var pointBtn=document.querySelector('#point');var closeOverlayBtn=document.querySelector('#close_overlay');var messagesContainer=document.querySelector('p');var positioningCheckbox=document.getElementById('start_tracking');var chbNearestTrackPoint=document.getElementById('track_point');var chbViewPosCoordinates=document.getElementById('view_pos_coords');var chbViewCornerCoordinates=document.getElementById('view_corner_coords');var chbSaveTrack=document.getElementById('save_track');var accuracyElement=document.getElementById('accuracy');var onClickOverlay=document.getElementById('onclick_overlay');function el(id){return document.getElementById(id);}var bottom_left_overlay=new ol.Overlay({element:el('bottomleftoverlay'),positioning:'bottom-left'});helloBtn.addEventListener('click',function(){_reactNativeWebviewMessaging2.default.send('hello from WebView');});var top_right_overlay=new ol.Overlay({element:el('toprightoverlay'),positioning:'top-right'});var cornerCoordsVisible=false;chbViewCornerCoordinates.addEventListener('click',function(){if(!cornerCoordsVisible){var extent=map.getView().calculateExtent(map.getSize());var coords,strCoords,element;coords=[extent[0],extent[1]];strCoords='lon: '+extent[0].toString()+'<br>'+'lat: '+extent[1].toString();element=bottom_left_overlay.getElement();element.innerHTML=strCoords;bottom_left_overlay.setPosition(coords);map.addOverlay(bottom_left_overlay);coords=[extent[2],extent[3]];strCoords='lon: '+extent[2].toString()+'<br>'+'lat: '+extent[3].toString();element=top_right_overlay.getElement();element.innerHTML=strCoords;top_right_overlay.setPosition(coords);map.addOverlay(top_right_overlay);}else{map.removeOverlay(top_right_overlay);map.removeOverlay(bottom_left_overlay);}cornerCoordsVisible=!cornerCoordsVisible;});closeOverlayBtn.addEventListener('click',function(){isOnclickOverlayVisible=false;map.removeOverlay(onclick_overlay);closeOverlayBtn.disabled=true;pointBtn.disabled=false;});var minAccuracy=25;var positionChanged=false;var userBreak;pointBtn.addEventListener('click',function(){if(!positioningCheckbox.checked){waitForProperGeolocation();positioningCheckbox.click();userBreak=false;_reactNativeWebviewMessaging2.default.sendJSON({command:'start-progress',payload:{indeterminate:true,caption:'Waiting for correct GPS location...'}});}else{if(positionChanged){var coordinates=geolocation.getPosition();var accuracy=geolocation.getAccuracy();openCheckPointForm(coordinates,accuracy);}}});var inProgress;function waitForProperGeolocation(){inProgress=setTimeout(function(){if(!positionChanged){waitForProperGeolocation();return;}var accuracy=0;var coordinates=geolocation.getPosition();positionChanged=false;if(typeof coordinates==='undefined'||coordinates===null){}else{view.setCenter(coordinates);positionFeature.setGeometry(coordinates?new ol.geom.Point(coordinates):null);accuracyFeature.setGeometry(geolocation.getAccuracyGeometry());accuracy=geolocation.getAccuracy();accuracyElement.innerText=accuracy+' [m]';accuracy<=minAccuracy?accuracyElement.style.color='black':accuracyElement.style.color='red';}if(accuracy>0&&accuracy<=minAccuracy){clearTimeout(inProgress);_reactNativeWebviewMessaging2.default.sendJSON({command:'stop-progress',payload:{}});openCheckPointForm(coordinates,accuracy);}else{waitForProperGeolocation();}},2000);}var openCheckPointForm=function openCheckPointForm(coordinates,accuracy){var datamode='new';if(!isOnclickOverlayVisible&&chbNearestTrackPoint.checked){var i;var trackPointCoordinates;var x,y,distance=0.0;var minDistance=100000.0;var minTrackLocationIndex;for(i=0;i<trackPoints.length;i++){trackPointCoordinates=trackPoints[i].getGeometry().getCoordinates();x=trackPointCoordinates[0]-coordinates[0];y=trackPointCoordinates[1]-coordinates[1];distance=Math.sqrt(x*x+y*y);if(distance<minDistance){minDistance=distance;minTrackLocationIndex=i;}}coordinates=trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();accuracy=trackPointsAccuracy[minTrackLocationIndex];}var checkPointCoordinates;for(i=0;i<checkPoints.length;i++){checkPointCoordinates=checkPoints[i].getGeometry().getCoordinates();if(checkPointCoordinates[0]==coordinates[0]&&checkPointCoordinates[1]==coordinates[1]){datamode='edit';break;}}_reactNativeWebviewMessaging2.default.sendJSON({command:'execute',payload:{functionName:'pointControl',geolocation:{coordinates:coordinates,accuracy:accuracy},datamode:datamode}});};_reactNativeWebviewMessaging2.default.on('text',function(text){messagesContainer.innerHTML='Received text from RN: '+text;});_reactNativeWebviewMessaging2.default.on('json',function(text){messagesContainer.innerHTML='Received json from RN: '+JSON.stringify(text);});_reactNativeWebviewMessaging2.default.on('greetingFromRN',function(event){messagesContainer.innerHTML='Received "greetingFromRN" event: '+JSON.stringify(event);});var initialZoom=19;var trackAvailable=false;var trackPoints=[];var trackPointsAccuracy=[];var trackName='';var checkPoints=[];_reactNativeWebviewMessaging2.default.on('transferTrackFromRN',function(track){var trackGeolocationData={};trackName=track.payload.trackName;messagesContainer.innerHTML=track.payload.trackName+' ('+track.payload.trackDate+')';trackGeolocationData=track.payload.geoLocations;trackAvailable=!track.payload.emptyTrack;removeLayer(pointLayer);trackPoints=[];trackPointsAccuracy=[];cratePointLayer();var i;var geolocationsCount=Object.keys(trackGeolocationData).length;if(geolocationsCount>0){addPointToTrack(firstPointStyle,[trackGeolocationData[0].coordinates[0],trackGeolocationData[0].coordinates[1]]);trackPointsAccuracy[0]=trackGeolocationData[0].accuracy;}for(i=1;i<geolocationsCount;i++){addPointToTrack(trackPointStyle,[trackGeolocationData[i].coordinates[0],trackGeolocationData[i].coordinates[1]]);trackPointsAccuracy[i]=trackGeolocationData[i].accuracy;};var s=new ol.source.Vector({features:trackPoints});pointLayer.setSource(s);addPointLayer(pointLayer);removeLayer(checkpointsLayer);checkPoints=[];crateCheckpointsLayer();addPointLayer(checkpointsLayer);el('view_track').checked=true;view.setZoom(initialZoom);if(geolocationsCount>0){view.setCenter([trackGeolocationData[0].coordinates[0],trackGeolocationData[0].coordinates[1]]);chbNearestTrackPoint.disabled=false;}else{chbNearestTrackPoint.disabled=true;}});_reactNativeWebviewMessaging2.default.on('createCheckpoint',function(payload){if(payload.checkpoint.create){var point_geom=new ol.geom.Point(payload.checkpoint.coordinates);var point_feature=new ol.Feature({geometry:point_geom});point_feature.setStyle(checkPointStyle);checkpointsLayer.getSource().addFeature(point_feature);checkPoints.push(point_feature);}map.removeOverlay(onclick_overlay);isOnclickOverlayVisible=false;closeOverlayBtn.disabled=true;pointBtn.disabled=false;});_reactNativeWebviewMessaging2.default.on('removeCheckpoint',function(payload){if(payload.checkpoint.remove){var i;var checkPointCoordinates,coordinates;for(i=0;i<checkPoints.length;i++){checkPointCoordinates=checkPoints[i].getGeometry().getCoordinates();coordinates=payload.checkpoint.coordinates;if(checkPointCoordinates[0]==coordinates[0]&&checkPointCoordinates[1]==coordinates[1]){checkpointsLayer.getSource().removeFeature(checkPoints[i],{silent:true});checkPoints.splice(i,1);break;}}}map.removeOverlay(onclick_overlay);isOnclickOverlayVisible=false;closeOverlayBtn.disabled=true;pointBtn.disabled=false;});_reactNativeWebviewMessaging2.default.on('progressEnded',function(payload){clearTimeout(inProgress);accuracyFeature.setGeometry(null);positionFeature.setGeometry(null);});var positionFeature=new ol.Feature();positionFeature.setStyle(new ol.style.Style({image:new ol.style.Circle({radius:6,fill:new ol.style.Fill({color:'#3399CC'}),stroke:new ol.style.Stroke({color:'#fff',width:2})})}));var trackPointStyle=new ol.style.Style({image:new ol.style.Circle({radius:2,fill:new ol.style.Fill({color:[0,0,255,1]}),stroke:new ol.style.Stroke({color:[255,0,0,1],width:1})}),zIndex:5});var firstPointStyle=new ol.style.Style({image:new ol.style.Circle({radius:2,fill:new ol.style.Fill({color:[255,255,0,1]}),stroke:new ol.style.Stroke({color:[0,0,255,1],width:1})}),zIndex:5});var pointLayer;function cratePointLayer(){pointLayer=new ol.layer.Vector({source:new ol.source.Vector({features:trackPoints})});}var checkPointStyle=new ol.style.Style({image:new ol.style.RegularShape({radius:10,radius2:4,points:5,angle:0,fill:new ol.style.Fill({color:'red'}),stroke:new ol.style.Stroke({color:'blue',width:1})})});var checkpointsLayer;function crateCheckpointsLayer(){checkpointsLayer=new ol.layer.Vector({source:new ol.source.Vector({features:checkPoints})});}var view=new ol.View({center:[0,0],rotation:0,enableRotation:false,zoom:2});var map=new ol.Map({target:'map',renderer:'canvas',layers:[new ol.layer.Tile({source:new ol.source.OSM()})],controls:ol.control.defaults({attributionOptions:{collapsible:false}}),view:view});var geolocation=new ol.Geolocation({projection:view.getProjection(),tracking:false,trackingOptions:{enableHighAccuracy:true,timeout:Infinity,maximumAge:0}});chbNearestTrackPoint.addEventListener('change',function(){if(this.checked&&isOnclickOverlayVisible&&trackPoints.length>0){var i;var trackPointCoordinates;var x,y,distance=0.0;var minDistance=100000.0;var minTrackLocationIndex;for(i=0;i<trackPoints.length;i++){trackPointCoordinates=trackPoints[i].getGeometry().getCoordinates();x=trackPointCoordinates[0]-onClickOverlayCoordinates[0];y=trackPointCoordinates[1]-onClickOverlayCoordinates[1];distance=Math.sqrt(x*x+y*y);if(distance<minDistance){minDistance=distance;minTrackLocationIndex=i;}}onClickOverlayCoordinates=trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();var hdms=ol.coordinate.toStringXY(onClickOverlayCoordinates,9);var element=onclick_overlay.getElement();element.innerHTML=hdms;onclick_overlay.setPosition(onClickOverlayCoordinates);}});positioningCheckbox.addEventListener('change',function(){if(this.checked){positionChanged=false;removeLayer(pointLayer);cratePointLayer();addPointLayer(pointLayer);_reactNativeWebviewMessaging2.default.sendJSON({command:'set-primary-key',payload:{trackName:trackName}});_reactNativeWebviewMessaging2.default.sendJSON({command:'disable-button',payload:{buttonName:'TrackControl'}});}else{chbSaveTrack.checked=false;accuracyFeature.setGeometry(null);positionFeature.setGeometry(null);accuracyElement.innerText='';map.removeOverlay(coord_overlay);_reactNativeWebviewMessaging2.default.sendJSON({command:'enable-button',payload:{buttonName:'TrackControl'}});}geolocation.setTracking(this.checked);});chbSaveTrack.addEventListener('change',function(){if(!trackAvailable){if(this.checked){this.checked=false;alert('No track available!');}return;}if(!positioningCheckbox.checked){if(this.checked){this.checked=false;alert('Start geolocation first!');}return;}});el('view_track').addEventListener('change',function(){if(this.checked){addPointLayer(pointLayer);}else{removeLayer(pointLayer);};});el('view_checkpoints').addEventListener('change',function(){if(this.checked){addPointLayer(checkpointsLayer);}else{removeLayer(checkpointsLayer);};});var isOnclickOverlayVisible=false;var isOnclickOverlayReady=true;function allowOnclickOverlay(){isOnclickOverlayReady=true;};var onClickOverlayCoordinates;onClickOverlay.addEventListener('click',function(){if(isOnclickOverlayReady){_reactNativeWebviewMessaging2.default.sendJSON({command:'execute',payload:{functionName:'pointControl',geolocation:{coordinates:onClickOverlayCoordinates,accuracy:0},datamode:'new'}});}});chbViewPosCoordinates.addEventListener('click',function(){if(!this.checked){map.removeOverlay(coord_overlay);};});geolocation.on('change',function(){positionChanged=true;var accuracy=geolocation.getAccuracy();accuracyElement.innerText=accuracy+' [m]';accuracy<=minAccuracy?accuracyElement.style.color='black':accuracyElement.style.color='red';});geolocation.on('error',function(error){var info=document.getElementById('info');info.innerHTML=error.message;info.style.display='';});var accuracyFeature=new ol.Feature();geolocation.on('change:accuracyGeometry',function(){accuracyFeature.setGeometry(geolocation.getAccuracyGeometry());});function addPointToTrack(style,coords){var trackPointFeature=new ol.Feature({geometry:new ol.geom.Point(coords)});trackPointFeature.setStyle(style);trackPoints.push(trackPointFeature);}geolocation.once('change:position',function(){view.setZoom(initialZoom);});var coord_overlay=new ol.Overlay({element:el('coordinate-overlay')});var onclick_overlay=new ol.Overlay({element:onClickOverlay,positioning:'bottom-left'});geolocation.on('change:position',function(){var coordinates=geolocation.getPosition();var accuracy=geolocation.getAccuracy();if(chbSaveTrack.checked){_reactNativeWebviewMessaging2.default.sendJSON({command:'execute',payload:{functionName:'saveGeolocation',geolocation:{coordinates:coordinates,accuracy:accuracy}}});var point_geom=new ol.geom.Point(coordinates);var point_feature=new ol.Feature({geometry:point_geom});point_feature.setStyle(trackPointStyle);pointLayer.getSource().addFeature(point_feature);trackPoints.push(point_feature);trackPointsAccuracy.push(accuracy);chbNearestTrackPoint.disabled=false;}if(chbViewPosCoordinates.checked){var hdms=ol.coordinate.toStringXY(coordinates,9);var element=coord_overlay.getElement();element.innerHTML=hdms;coord_overlay.setPosition(coordinates);map.addOverlay(coord_overlay);};view.setCenter(coordinates);positionFeature.setGeometry(coordinates?new ol.geom.Point(coordinates):null);});var positionLayer;positionLayer=new ol.layer.Vector({map:map,source:new ol.source.Vector({features:[accuracyFeature,positionFeature]})});function addPointLayer(points){map.addLayer(points);}function removeLayer(points){map.removeLayer(points);}map.on('click',function(event){if(isOnclickOverlayReady){isOnclickOverlayReady=false;if(isOnclickOverlayVisible){isOnclickOverlayVisible=false;map.removeOverlay(onclick_overlay);closeOverlayBtn.disabled=true;pointBtn.disabled=false;}else{isOnclickOverlayVisible=true;var coords=event.coordinate;var accuracy=0;var minDistance=2.0;var i;if(chbNearestTrackPoint.checked){var trackPointCoordinates;var x,y,distance=0.0;var minDist=100000.0;var minTrackLocationIndex;for(i=0;i<trackPoints.length;i++){trackPointCoordinates=trackPoints[i].getGeometry().getCoordinates();x=trackPointCoordinates[0]-coords[0];y=trackPointCoordinates[1]-coords[1];distance=Math.sqrt(x*x+y*y);if(distance<minDist){minDist=distance;minTrackLocationIndex=i;}}coords=trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();accuracy=trackPointsAccuracy[minTrackLocationIndex];minDistance=0.0;}onClickOverlayCoordinates=coords;var found=false;if(checkPoints.length>0){var checkPointCoordinates;var x,y,distance=0.0;var minCheckPointIndex;for(i=checkPoints.length-1;i>=0;i--){checkPointCoordinates=checkPoints[i].getGeometry().getCoordinates();x=checkPointCoordinates[0]-coords[0];y=checkPointCoordinates[1]-coords[1];distance=Math.sqrt(x*x+y*y);if(distance<=minDistance){found=true;minCheckPointIndex=i;_reactNativeWebviewMessaging2.default.sendJSON({command:'execute',payload:{functionName:'pointControl',geolocation:{coordinates:checkPointCoordinates,accuracy:accuracy},datamode:'edit'}});break;}}}if(!found){var hdms=ol.coordinate.toStringXY(coords,9);var element=onclick_overlay.getElement();element.innerHTML=hdms;onclick_overlay.setPosition(coords);map.addOverlay(onclick_overlay);closeOverlayBtn.disabled=false;pointBtn.disabled=true;}}setTimeout(allowOnclickOverlay,700);}});map.getView().on('change:resolution',function(){el('zoom').innerText=map.getView().getZoom();});crateCheckpointsLayer();addPointLayer(checkpointsLayer);
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;var _typeof=typeof Symbol==="function"&&typeof(typeof Symbol==="function"?Symbol.iterator:"@@iterator")==="symbol"?function(obj){return typeof obj;}:function(obj){return obj&&typeof Symbol==="function"&&obj.constructor===Symbol&&obj!==(typeof Symbol==="function"?Symbol.prototype:"@@prototype")?"symbol":typeof obj;};!function(e,t){"object"==( false?"undefined":_typeof(exports))&&"object"==( false?"undefined":_typeof(module))?module.exports=t(): true?!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (t),
+				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__)):"object"==(typeof exports==="undefined"?"undefined":_typeof(exports))?exports["react-native-webview-messaging"]=t():e["react-native-webview-messaging"]=t();}(undefined,function(){return function(e){function t(r){if(n[r])return n[r].exports;var i=n[r]={i:r,l:!1,exports:{}};return e[r].call(i.exports,i,i.exports,t),i.l=!0,i.exports;}var n={};return t.m=e,t.c=n,t.i=function(e){return e;},t.d=function(e,n,r){t.o(e,n)||Object.defineProperty(e,n,{configurable:!1,enumerable:!0,get:r});},t.n=function(e){var n=e&&e.__esModule?function(){return e.default;}:function(){return e;};return t.d(n,"a",n),n;},t.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t);},t.p="",t(t.s=2);}([function(e,t,n){"use strict";Object.defineProperty(t,"__esModule",{value:!0});t.RN_MESSAGES_CHANNEL_PREFIX="f251c210-e7c9-42fa-bae3-b9352ec3722a";},function(e,t,n){"use strict";function r(){this._events=this._events||{},this._maxListeners=this._maxListeners||void 0;}function i(e){return"function"==typeof e;}function s(e){return"number"==typeof e;}function o(e){return"object"===(void 0===e?"undefined":f(e))&&null!==e;}function u(e){return void 0===e;}var f="function"==typeof Symbol&&"symbol"==_typeof(typeof Symbol==="function"?Symbol.iterator:"@@iterator")?function(e){return typeof e==="undefined"?"undefined":_typeof(e);}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==(typeof Symbol==="function"?Symbol.prototype:"@@prototype")?"symbol":typeof e==="undefined"?"undefined":_typeof(e);};e.exports=r,r.EventEmitter=r,r.prototype._events=void 0,r.prototype._maxListeners=void 0,r.defaultMaxListeners=10,r.prototype.setMaxListeners=function(e){if(!s(e)||e<0||isNaN(e))throw TypeError("n must be a positive number");return this._maxListeners=e,this;},r.prototype.emit=function(e){var t,n,r,s,f,l;if(this._events||(this._events={}),"error"===e&&(!this._events.error||o(this._events.error)&&!this._events.error.length)){if((t=arguments[1])instanceof Error)throw t;var a=new Error('Uncaught, unspecified "error" event. ('+t+")");throw a.context=t,a;}if(n=this._events[e],u(n))return!1;if(i(n))switch(arguments.length){case 1:n.call(this);break;case 2:n.call(this,arguments[1]);break;case 3:n.call(this,arguments[1],arguments[2]);break;default:s=Array.prototype.slice.call(arguments,1),n.apply(this,s);}else if(o(n))for(s=Array.prototype.slice.call(arguments,1),l=n.slice(),r=l.length,f=0;f<r;f++){l[f].apply(this,s);}return!0;},r.prototype.addListener=function(e,t){var n;if(!i(t))throw TypeError("listener must be a function");return this._events||(this._events={}),this._events.newListener&&this.emit("newListener",e,i(t.listener)?t.listener:t),this._events[e]?o(this._events[e])?this._events[e].push(t):this._events[e]=[this._events[e],t]:this._events[e]=t,o(this._events[e])&&!this._events[e].warned&&(n=u(this._maxListeners)?r.defaultMaxListeners:this._maxListeners)&&n>0&&this._events[e].length>n&&(this._events[e].warned=!0,console.error("(node) warning: possible EventEmitter memory leak detected. %d listeners added. Use emitter.setMaxListeners() to increase limit.",this._events[e].length),"function"==typeof console.trace&&console.trace()),this;},r.prototype.on=r.prototype.addListener,r.prototype.once=function(e,t){function n(){this.removeListener(e,n),r||(r=!0,t.apply(this,arguments));}if(!i(t))throw TypeError("listener must be a function");var r=!1;return n.listener=t,this.on(e,n),this;},r.prototype.removeListener=function(e,t){var n,r,s,u;if(!i(t))throw TypeError("listener must be a function");if(!this._events||!this._events[e])return this;if(n=this._events[e],s=n.length,r=-1,n===t||i(n.listener)&&n.listener===t)delete this._events[e],this._events.removeListener&&this.emit("removeListener",e,t);else if(o(n)){for(u=s;u-->0;){if(n[u]===t||n[u].listener&&n[u].listener===t){r=u;break;}}if(r<0)return this;1===n.length?(n.length=0,delete this._events[e]):n.splice(r,1),this._events.removeListener&&this.emit("removeListener",e,t);}return this;},r.prototype.removeAllListeners=function(e){var t,n;if(!this._events)return this;if(!this._events.removeListener)return 0===arguments.length?this._events={}:this._events[e]&&delete this._events[e],this;if(0===arguments.length){for(t in this._events){"removeListener"!==t&&this.removeAllListeners(t);}return this.removeAllListeners("removeListener"),this._events={},this;}if(n=this._events[e],i(n))this.removeListener(e,n);else if(n)for(;n.length;){this.removeListener(e,n[n.length-1]);}return delete this._events[e],this;},r.prototype.listeners=function(e){return this._events&&this._events[e]?i(this._events[e])?[this._events[e]]:this._events[e].slice():[];},r.prototype.listenerCount=function(e){if(this._events){var t=this._events[e];if(i(t))return 1;if(t)return t.length;}return 0;},r.listenerCount=function(e,t){return e.listenerCount(t);};},function(e,t,n){"use strict";function r(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function");}function i(e,t){if(!e)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return!t||"object"!=(typeof t==="undefined"?"undefined":_typeof(t))&&"function"!=typeof t?e:t;}function s(e,t){if("function"!=typeof t&&null!==t)throw new TypeError("Super expression must either be null or a function, not "+(typeof t==="undefined"?"undefined":_typeof(t)));e.prototype=Object.create(t&&t.prototype,{constructor:{value:e,enumerable:!1,writable:!0,configurable:!0}}),t&&(Object.setPrototypeOf?Object.setPrototypeOf(e,t):e.__proto__=t);}function o(e,t){return JSON.stringify({type:e,payload:t});}var u=function(){function e(e,t){for(var n=0;n<t.length;n++){var r=t[n];r.enumerable=r.enumerable||!1,r.configurable=!0,"value"in r&&(r.writable=!0),Object.defineProperty(e,r.key,r);}}return function(t,n,r){return n&&e(t.prototype,n),r&&e(t,r),t;};}(),f=function e(t,n,r){null===t&&(t=Function.prototype);var i=Object.getOwnPropertyDescriptor(t,n);if(void 0===i){var s=Object.getPrototypeOf(t);return null===s?void 0:e(s,n,r);}if("value"in i)return i.value;var o=i.get;if(void 0!==o)return o.call(r);},l=n(1),a=function(e){return e&&e.__esModule?e:{default:e};}(l),c=n(0),p=function(e){function t(){return r(this,t),i(this,(t.__proto__||Object.getPrototypeOf(t)).apply(this,arguments));}return s(t,e),u(t,[{key:"sendJSON",value:function value(e){window.postMessage(c.RN_MESSAGES_CHANNEL_PREFIX+o("json",e));}},{key:"send",value:function value(e){window.postMessage(c.RN_MESSAGES_CHANNEL_PREFIX+o("text",e));}},{key:"emit",value:function value(e,n,r){f(t.prototype.__proto__||Object.getPrototypeOf(t.prototype),"emit",this).call(this,e,n),r||window.postMessage(c.RN_MESSAGES_CHANNEL_PREFIX+JSON.stringify({type:"event",meta:{eventName:e},payload:n}));}}]),t;}(a.default);window.RNMessagesChannel=new p(),e.exports=window.RNMessagesChannel;}]);});
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2)(module)))
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+module.exports=function(module){if(!module.webpackPolyfill){module.deprecate=function(){};module.paths=[];if(!module.children)module.children=[];Object.defineProperty(module,"loaded",{enumerable:true,get:function get(){return module.l;}});Object.defineProperty(module,"id",{enumerable:true,get:function get(){return module.i;}});module.webpackPolyfill=1;}return module;};
+
+/***/ })
+/******/ ]);</script></body>
+</html>
