@@ -1,15 +1,42 @@
 import React, { Component } from 'react';
 import { Alert } from 'react-native';
-import { View, Thumbnail, SwipeRow, Text, Icon, Button, H3 } from 'native-base';
+import { View, SwipeRow, Text, Icon, Button, H3 } from 'native-base';
 import { getFormattedDate } from '../components/utilities';
+import { realm } from '../components/RealmSchema';
 
 // props, които се подават на компонента:
-// this.props.key - expeditionID - ID на експедицията в базата
-// this.props.expedition - expedition обекта от базата
-// this.props.navigation - референция към навигатора на компонента, който е извикал
+// * this.props.key - expeditionID - ID на експедицията в базата
+// * this.props.expedition - expedition обекта от базата
+// * this.props.navigation - референция към навигатора на компонента, който е извикал
+// * this.props.fieldChange от екрана със списъка с издирванията
+//      - изчита отново списъка с експедициите от базата и ререндва
 
 class SwipableExpeditionCard extends Component {
   state = { expanded: false };
+
+  deleteData(id) {
+      console.log('delete current index:', id);
+      const allExpeditions = realm.objects('Expedition');
+      const currExpedition = allExpeditions.filtered(`id=${id}`)[0];
+      realm.write(() => {
+        realm.delete(currExpedition); // Delete current expedition from database
+      this.props.fieldChange();
+    }
+    );
+  }
+
+  renderDeleteAlert() {
+    Alert.alert(
+      'Внимание!',
+      'СИГУРНИ ли сте, че желаете да изтриете избраното издирване, заедно с всички данни?',
+      [
+        //{text: 'Ask me later', onPress: () => console.log('Ask me later pressed')},
+        { text: 'Yes', onPress: () => { this.deleteData(this.props.expedition.id); } },
+        { text: 'No', onPress: () => {}, style: 'cancel' },
+      ],
+      { cancelable: false }
+    );
+  }
 
   render() {
       const { expeditionName, leaderName, startDate, id } = this.props.expedition;
@@ -45,14 +72,13 @@ class SwipableExpeditionCard extends Component {
                 </View>
               }
               right={
-                <Button danger onPress={() => { Alert.alert('You tapped the button!'); }}>
+                <Button danger onPress={() => this.renderDeleteAlert()}>
                   <Icon active name="trash" />
                 </Button>
               }
             />
       );
   }
-
 }
 
 const styles = {

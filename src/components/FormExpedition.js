@@ -14,6 +14,7 @@ import { realm } from '../components/RealmSchema';
 // this.props.regionZoom - zoom level, 'double'
 // this.props.regionCoordinates -  'string'
 // this.props.regionFeatures - 'string'
+// this.props.closeModal -  затваря модалния прозорец
 
 class FormExpedition extends Component {
   state = { expeditionTitle: '',
@@ -24,6 +25,7 @@ class FormExpedition extends Component {
             regionFeatures: '',
             regionDescription: '',
             dataMode: '',
+            dataChanged: false,
             error: '',
             loading: false };
 
@@ -76,16 +78,20 @@ class FormExpedition extends Component {
     //this.onEditSuccess.bind(this);
   }
 
+  onChangeData() {
+    this.setState({ dataChanged: true });
+  }
+
   onEditFail() {
     this.setState({ error: 'Record failed!', loading: false });
   }
 
-  onEditSuccess() {
+  onEditSuccess(expData) {
     this.setState({
       loading: false,
       error: ''
     });
-    this.props.closeModal();
+    this.props.closeModal(expData);
   }
 
   saveExpedition = (expeditionData, recordMode) =>
@@ -122,10 +128,9 @@ class FormExpedition extends Component {
           realm.write(() => {
             realm.create('Expedition', expeditionRec);
           });
-
-          resolve(expeditionRec);
+          resolve(this.onEditSuccess(expeditionRec));
             } catch (e) {
-              reject(e);
+              reject(this.onEditFail());
         }
       } else { // редакция на съществуващ запис
         try {
@@ -138,11 +143,8 @@ class FormExpedition extends Component {
             currExpedition.days = parseInt(numberOfDays, 10);
             currExpedition.regionDescription = regionDescription;
           });
-
-
-          resolve(currExpedition);
+          resolve(this.onEditSuccess(currExpedition));
         } catch (e) {
-
           reject(e);
         }
       }

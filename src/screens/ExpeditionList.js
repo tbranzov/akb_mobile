@@ -12,20 +12,26 @@ class ExpeditionList extends Component {
 
   state = { expeditions: [], isModalVisible: false };
 
-  componentDidMount() {
-    //console.log('regionCoords', this.props.regionCoords);
-    //this.regionCoords = this.props.regionCoords.slice();
-    //this.zoom = this.props.regionZoom;
+componentDidMount() {
+  //console.log('regionCoords', this.props.regionCoords);
+  //this.regionCoords = this.props.regionCoords.slice();
+  //this.zoom = this.props.regionZoom;
 
-    //this.regionCoordsDefinition();
+  //this.regionCoordsDefinition();
 
-    //this.clearDataField();
-    console.log('Starting to read expeditions');
+  this.willFocusSubscription();
+}
 
-    this.readAllExpeditions();
+componentWillUnMount() {
+  this.willFocusSubscription.remove();
+}
 
-    //this.setDataFieldsState(false);
-  }
+willFocusSubscription = () => {
+    this.props.navigation.addListener(
+    'willFocus',
+    () => { this.readAllExpeditions(); }
+  );
+}
 
 readAllExpeditions() {
   console.log('read all expeditions');
@@ -72,6 +78,7 @@ readAllExpeditions() {
         key={expedition.id}
         expedition={expedition}
         navigation={this.props.navigation}
+        fieldChange={this.readAllExpeditions.bind(this)}
       />);
   }
 
