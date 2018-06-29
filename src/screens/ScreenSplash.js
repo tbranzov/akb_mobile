@@ -233,7 +233,7 @@ const styles = StyleSheet.create(
 
     classView:
     {
-        backgroundColor: '#00BCD4',
+        backgroundColor: 'powderblue',
         //justifyContent: 'center',
         flex: 1,
         margin: 10,

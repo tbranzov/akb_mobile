@@ -24,10 +24,26 @@ const stackSplash = createStackNavigator(
 
 const stackTab = createBottomTabNavigator(
   {
-      Home: { screen: HomeScreen },
-      Expeditions: stackExpeditions,
-      Communication: { screen: CommunicationScreen },
-      Settings: { screen: SettingsScreen },
+      Home: { screen: HomeScreen,
+              navigationOptions: {
+        tabBarLabel: 'Карта'
+        }
+       },
+      Expeditions: { screen: stackExpeditions,
+                navigationOptions: {
+          tabBarLabel: 'Данни'
+          }
+         },
+      Communication: { screen: CommunicationScreen,
+                navigationOptions: {
+          tabBarLabel: 'Комуникация'
+          }
+         },
+      Settings: { screen: SettingsScreen,
+                navigationOptions: {
+          tabBarLabel: 'Настройки'
+          }
+         },
   },
   {
      navigationOptions: ({ navigation }) => ({

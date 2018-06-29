@@ -48,29 +48,30 @@ readAllExpeditions() {
   });
 }
 
-  renderNewExpedition() {
-    return (
-      <TouchableOpacity
-        onPress={() => {
-         this.props.navigation.navigate('Details', {
-            titleExpedition: 'Ново издирване',
-        });
-      }}
-      >
-        <Card>
-          <CardSection>
-            <View style={thumbnailContainerStyle} >
-              <Ionicons name={'ios-add'} size={50} color={'tomato'} />
-            </View>
-            <View style={headerContentStyle} >
-              <Text style={headerTextStyle}>{' Добавете издирване '}</Text>
-              <Text>{ ' Съдържа тракове, точки и други данни '}</Text>
-            </View>
-          </CardSection>
-        </Card>
-      </TouchableOpacity>
-    );
-  }
+renderNewExpedition() {
+  return (
+    <TouchableOpacity
+      onPress={() => {
+       this.props.navigation.navigate('Details', {
+          titleExpedition: 'Ново издирване',
+      });
+    }}
+    >
+      <Card>
+        <CardSection>
+          <View style={thumbnailContainerStyle} >
+            <Ionicons name={'ios-add'} size={50} color={'tomato'} />
+          </View>
+          <View style={headerContentStyle} >
+            <Text style={headerTextStyle}>{' Добавете издирване '}</Text>
+            <Text>{ ' Съдържа тракове, точки и други данни '}</Text>
+          </View>
+        </CardSection>
+      </Card>
+    </TouchableOpacity>
+  );
+}
+
 
   renderExpeditions() {
     return this.state.expeditions.map(expedition =>
@@ -85,13 +86,13 @@ readAllExpeditions() {
   render() {
       return (
       <View>
-        {this.renderNewExpedition()}
+         {this.renderNewExpedition()}
         <View style={headerViewStyle}>
           <Text style={headerTextStyle}>{' Записани издирвания: '}</Text>
         </View>
-        <ScrollView>
-            {this.renderExpeditions()}
-        </ScrollView>
+          <ScrollView style={{ marginTop: 3 }}>
+              {this.renderExpeditions()}
+          </ScrollView>
       </View>
     );
   }
@@ -107,6 +108,7 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     height: 45,
+    marginTop: 10,
     paddingTop: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },

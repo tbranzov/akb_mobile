@@ -10,6 +10,7 @@ class SettingsScreen extends Component {
           title="Go to details"
           onPress={() => this.props.navigation.navigate('Details')}
         />
+      <Text> Логин форма.</Text>
       </View>
     );
   }

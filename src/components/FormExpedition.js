@@ -3,9 +3,9 @@ import { Container,
           Content, View,
           Header, Body, Title, Subtitle,
           Button,
-          Spinner, DatePicker,
+          Spinner,
           Form, Item, Input, Label, Text } from 'native-base';
-import Realm from 'realm';
+import DatePicker from 'react-native-datepicker';
 import { realm } from '../components/RealmSchema';
 
 // props, които се подават на компонента:
@@ -178,14 +178,14 @@ class FormExpedition extends Component {
         </Header>
         <Content>
           <Form>
-            <Item floatingLabel>
+            <Item stackedLabel>
               <Label>Име на експедицията</Label>
               <Input
                 value={this.state.expeditionTitle}
                 onChangeText={expeditionTitle => this.setState({ expeditionTitle })}
               />
             </Item>
-            <Item floatingLabel last>
+            <Item stackedLabel>
             <Label>Ръководител</Label>
             <Input
               value={this.state.leaderName}
@@ -193,10 +193,29 @@ class FormExpedition extends Component {
             />
             </Item>
             <Item stackedLabel>
-              <Label>Начална дата:</Label>
-              <Input
-                value={this.state.dateStart}
-                onChangeText={dateStart => this.setState({ dateStart })}
+            <Label>Начална дата</Label>
+              <DatePicker
+                style={{ margin: 10, width: 200 }}
+                date={this.state.dateStart}
+                mode="date"
+                placeholder="Избери начална дата"
+                format="YYYY-MM-DD"
+                minDate="1978-07-02"
+                maxDate="2178-07-02"
+                confirmBtnText="Потвърди"
+                cancelBtnText="Отмени"
+                customStyles={{
+                  dateIcon: {
+                    position: 'absolute',
+                    left: 0,
+                    top: 4,
+                    marginLeft: 0
+                  },
+                  dateInput: {
+                    marginLeft: 36
+                  }
+                }}
+                onDateChange={dateStart => this.setState({ dateStart })}
               />
             </Item>
             <Item fixedLabel last>

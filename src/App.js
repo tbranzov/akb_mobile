@@ -1,9 +1,14 @@
 import React, { Component } from 'react';
-import { AppState, NetInfo, } from 'react-native';
+import { AppState, NetInfo, YellowBox } from 'react-native';
 import { View } from 'native-base';
 //import { realm } from './components/RealmSchema';
 import Nav from './Nav';
 //import '../ReactotronConfig';
+
+YellowBox.ignoreWarnings([
+  'Warning: isMounted(...) is deprecated', 
+  'Module RCTImageLoader'
+]);
 
 class App extends Component {
 

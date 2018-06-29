@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Modal from 'react-native-modal';
-import { Container, Content, Button, Icon } from 'native-base';
+import { Icon } from 'native-base';
 import { Card, CardSection } from '../components/common';
+import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
 // функция, която връща следващ идентификатор за запис в базата
 import { NewExpeditionID } from '../components/RealmSchema';
@@ -33,6 +34,40 @@ class ExpeditionDetails extends Component {
 
 componentDidMount() {
   const titleExpedition = this.props.navigation.getParam('titleExpedition', 'Ново издирване');
+// макетна структура с примерни данни за тест на тракове и точки
+// да се изтрие при внедряване върху устройство
+  const dummyGL1 = {
+      coordinates: [57.15, 43.12, 67.18, 23.31],
+      accuracy: 5,
+  };
+  const dummyGL2 = {
+      coordinates: [47.15, 33.12, 57.18, 13.31],
+      accuracy: 8,
+  };
+  this.setState({
+    tracks: [
+      { trackName: 'Трак 1',
+        trackDate: '2017/12/18',
+        geoLocations: dummyGL1 },
+        { trackName: 'Трак 2',
+          trackDate: '2016/12/19',
+          geoLocations: dummyGL2 },
+          { trackName: 'Трак 3',
+            trackDate: '2017/12/20',
+            geoLocations: dummyGL1 },
+            { trackName: 'Трак 4',
+              trackDate: '2016/12/21',
+              geoLocations: dummyGL2 },
+              { trackName: 'Трак 5',
+                trackDate: '2017/12/22',
+                geoLocations: dummyGL1 },
+                { trackName: 'Трак 6',
+                  trackDate: '2016/12/23',
+                  geoLocations: dummyGL2 },
+    ]
+  });
+  // макетна структура за тест на тракове и точки
+  // да се изтрие при внедряване върху устройство
 
   if (titleExpedition === 'Ново издирване') {
     //expeditionID: NewExpeditionID() // взема следващ идентификатор за запис в базата
@@ -101,13 +136,13 @@ renderCardEditExpedition() {
             <Text>{ `Начало: ${startDate}`}</Text>
             <Text>{ `Ръководител: ${leaderName}`}</Text>
           </View>
-          <Button transparent onPress={this.toggleModal}>
+          <TouchableOpacity onPress={this.toggleModal}>
             <Icon
               ios='ios-more'
               android='md-more'
               style={{ fontSize: 50, color: 'tomato' }}
             />
-          </Button>
+          </TouchableOpacity>
         </CardSection>
       </Card>
     );
@@ -115,37 +150,31 @@ renderCardEditExpedition() {
 
 renderTracks() {
     if (this.state.tracks) {
-      //return this.state.tracks.map(track =>
-        //<SwipableExpeditionCard
-        //  key={track.id}
-        //  expedition={expedition}
-        //  navigation={this.props.navigation}
-        ///>
-      //);
+      return <MultiSelectList data={this.state.tracks} />;
     }
   }
 
 render() {
       return (
-        <Container>
-            <View>
-              {this.renderCardEditExpedition()}
-            </View>
-            <View style={headerViewStyle}>
-              <Text style={headerTextStyle}>{' Записани тракове: '}</Text>
-            </View>
-            <Content style={contentViewStyle}>
-              {this.renderTracks()}
-            </Content>
-            <View>
-              <Modal
-              isVisible={this.state.isModalVisible}
-              onModalHide={() => this.renderTracks()}
-              >
-                {this.renderModalEditExpedition()}
-              </Modal>
-            </View>
-        </Container>
+        <View>
+           <View>
+             {this.renderCardEditExpedition()}
+           </View>
+           <View style={headerViewStyle}>
+             <Text style={headerTextStyle}>{' Записани тракове: '}</Text>
+           </View>
+           <View>
+             {this.renderTracks()}
+           </View>
+           <View>
+             <Modal
+             isVisible={this.state.isModalVisible}
+             onModalHide={() => this.renderTracks()}
+             >
+               {this.renderModalEditExpedition()}
+             </Modal>
+           </View>
+        </View>
     );
   }
 }
