@@ -14,11 +14,10 @@ const stackExpeditions = createStackNavigator({
 });
 
 const stackAuth = createStackNavigator({
-  Login: ScreenLogin,
+  Login: { screen: ScreenLogin }
 });
 
-const stackSplash = createStackNavigator(
-  {
+const stackSplash = createStackNavigator({
   SplashScreen: { screen: ScreenSplash }
   });
 

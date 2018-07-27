@@ -1,77 +1,64 @@
+/* Usage:
+
+<AuthHandler
+  Reason={constReason}
+  Result={handlerAuth} // JSON обект   { Authenticated: 0,
+                                      infoMessage: authStatusInProgress,
+                                      authCredentials: '' },
+/>
+
+*/
+
 import React, { Component } from 'react';
-import { AppState, NetInfo, YellowBox, Alert } from 'react-native';
-import { View } from 'native-base';
-import { realm } from './components/RealmSchema';
-import { refreshTokenEndpoint } from './components/constants';
-import Nav from './Nav';
+import { Alert, NetInfo, View } from 'react-native';
+import { realm } from '../components/RealmSchema';
+import { refreshTokenEndpoint,
+            authStatusNoComm,
+            authStatusSuccess,
+            authStatusUnsuccess,
+            authStatusInProgress,
+            authStatusUnsuccessNoCred
+          } from '../components/constants';
 
-YellowBox.ignoreWarnings([
-  'Warning: isMounted(...) is deprecated',
-  'Module RCTImageLoader'
-]);
-
-class App extends Component {
-  constructor() {
-      super();
-      //Defining global variables
-      global.ct = ''; //Current access token. This is also flag for valid credentials
-      global.crt = ''; //Current refresh token
-      global.dbVerAKB = ''; //The actual (last) databse version of AKB-GIS
-      this.state = { appState: '',
-                      connectionState: '',
-                      authState: '' };
-  }
+class AuthHandler extends Component {
+  state = { authState:
+            { Authenticated: 0,
+              infoMessage: authStatusInProgress,
+              authCredentials: '' },
+        };
 
   componentDidMount() {
-    AppState.addEventListener('change', this.handleAppStateChange);
-    NetInfo.addEventListener('connectionChange', this.handleConnectivityChange);
+    NetInfo.getConnectionInfo().then((connectionInfo) =>
+            this.handleConnectivityChange(connectionInfo));
   }
 
-  componentWillUnMount() {
-    AppState.removeEventListener('change', this.handleAppStateChange);
+  componentWillUnmount() {
     NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
   }
 
-  /* АВТЕНТИКАЦИЯ
-=======================
-  */
-
-  handleAppStateChange = (nextAppState) => {
-     this.setState({ appState: nextAppState });
-  }
-
-  //Event listener for NetInfo component
+  //Event listener за промяна в свързаността
   handleConnectivityChange = (connectionInfo) => {
-     //console.log('Connectivity change: type=' + connectionInfo.type + ', effective type='
-     //+ connectionInfo.effectiveType);
-     //netInfo = connectionInfo;
-     this.setState({ connectionState: connectionInfo });
-     //For development purposes only - да се замени с икона
-
-     if (this.connected()) { // there is internet connection
-         //this.doAccessTokenRefresh('handleConnectivityChange');
+    //console.log(`Връзката се промени на: ${connectionInfo.type}`);
+     if (!(connectionInfo.type === 'none' || connectionInfo.type === 'unknown')) {
+       // there is internet connection
+         this.doAccessTokenRefresh('handleConnectivityChange');
      } else {
-         global.ct = ''; //Flag for closed communication chanel to AKB GIS
+        this.handleAuthStateChange({ Authenticated: 0,
+                      infoMessage: authStatusNoComm });
      }
+     NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
+     NetInfo.addEventListener('connectionChange', this.handleConnectivityChange);
   }
 
   handleAuthStateChange = (currentAuthState) => {
      this.setState({ authState: currentAuthState });
+     this.props.Result(this.state.authState);
      console.log(`Auth state changed to:${currentAuthState}`);
   }
-
-  connected = () =>
-      //Return true, if there is internet connection
-       !(this.state.connectionState.type === 'none' ||
-         this.state.connectionState.type === 'unknown')
 
   doAccessTokenRefresh = (callFrom) => {
      const refreshAT = (refreshToken) => {
          this.refreshAccessToken(refreshToken);
-     };
-
-     const openLogin = () => {
-         this.props.navigation.navigate('Auth');
      };
 
      //Read user credentials from Realm database to get refresh token for access token
@@ -79,13 +66,11 @@ class App extends Component {
      this.readCredentials()
          .then((credentials) => {
              if (credentials === undefined) {
-                 //This happens to application on first start only
-                 console.log('Open Login screen ...');
-                 openLogin(); //Important: refreshAccessToken is NOT visible here
+              this.handleAuthStateChange({ Authenticated: -1,
+                            infoMessage: authStatusUnsuccessNoCred });
+              // Хендлъра трябва да извика логин формата
              } else {
-                 //No matter if access token is valid or not, always update access token
-                 //on application start
-                 refreshAT(credentials.rt); //Important: this.setState is NOT visible here
+              refreshAT(credentials.rt);
              }
          })
          .catch((err) => {
@@ -141,7 +126,8 @@ class App extends Component {
 
   refreshAccessToken = (rt) => {
     console.log('Refreshing access token ...');
-    this.handleAuthStateChange('ongoing');
+    this.handleAuthStateChange({ Authenticated: 0,
+                  infoMessage: authStatusInProgress });
 
      global.ct = '';
      global.crt = '';
@@ -178,15 +164,18 @@ class App extends Component {
                  global.ct = params.accessToken;
                  global.dbVerAKB = params.dbVersion;
                  console.log(`Global credentials state:\n ct=${global.ct},\n crt=${global.crt}`);
-                 this.handleAuthStateChange('authenticated');
-                 this.props.navigation.navigate('App');
+                 this.handleAuthStateChange({ Authenticated: 1,
+                               infoMessage: authStatusSuccess,
+                                authCredentials: bodyJSON.data.user.email });
              })
              .catch((error) => {
                  console.log(`Error on saving new credentials! ${error.toString()}`);
              });
          } else {
             console.log(`Refresh token error! ${JSON.stringify(bodyJSON.meta.errors)}`);
-            this.props.navigation.navigate('Auth');
+            this.handleAuthStateChange({ Authenticated: -1,
+                          infoMessage: authStatusUnsuccess });
+            // Хендлъра трябва да извика логин формата
          }
      })
 
@@ -195,16 +184,13 @@ class App extends Component {
      });
   }
 
-
-    render() {
-      return (
-        <View style={{ flex: 1 }}>
-          <Nav
-            screenProps={this.state.authState}
-          />
-        </View>
+  render() {
+    return (
+      <View>
+        {this.props.children}
+      </View>
     );
   }
 }
 
-export default App;
+export { AuthHandler };

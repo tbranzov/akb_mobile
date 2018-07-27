@@ -1,3 +1,11 @@
+// props, които се подават на компонента:
+// this.props.expeditionID - ID на експедицията в базата
+// this.props.recordMode - 1 за нов запис, 2 за редакция на съществуващ
+// this.props.regionZoom - zoom level, 'double'
+// this.props.regionCoordinates -  'string'
+// this.props.regionFeatures - 'string'
+// this.props.closeModal -  затваря модалния прозорец
+
 import React, { Component } from 'react';
 import { Container,
           Content, View,
@@ -7,14 +15,6 @@ import { Container,
           Form, Item, Input, Label, Text } from 'native-base';
 import DatePicker from 'react-native-datepicker';
 import { realm } from '../components/RealmSchema';
-
-// props, които се подават на компонента:
-// this.props.expeditionID - ID на експедицията в базата
-// this.props.recordMode - 1 за нов запис, 2 за редакция на съществуващ
-// this.props.regionZoom - zoom level, 'double'
-// this.props.regionCoordinates -  'string'
-// this.props.regionFeatures - 'string'
-// this.props.closeModal -  затваря модалния прозорец
 
 class FormExpedition extends Component {
   state = { expeditionTitle: '',

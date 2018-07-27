@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
-import { TouchableOpacity, Text, View, ScrollView } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Card, CardSection } from '../components/common';
-import { SwipableExpeditionCard } from '../components/SwipableExpeditionCard';
+import { TouchableOpacity, Alert, Text, View } from 'react-native';
+import { ListItem, Card } from 'react-native-elements';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { SwipeListView } from 'react-native-swipe-list-view';
 import { realm } from '../components/RealmSchema';
+// функция, която връща форматирана за изобразяване дата
+import { getFormattedDate } from '../components/utilities';
 
 class ExpeditionList extends Component {
   static navigationOptions = ({ navigation }) => ({
@@ -33,8 +35,16 @@ willFocusSubscription = () => {
   );
 }
 
+onPressListItem = ({ item }) => {
+   this.props.navigation.navigate('Details', {
+      titleExpedition: item.expeditionName,
+      expID: item.id,
+      objExpedition: item,
+  });
+}
+
 readAllExpeditions() {
-  console.log('read all expeditions');
+  //console.log('read all expeditions');
   return new Promise((resolve, reject) => {
     try {
       const expeditions = realm.objects('Expedition').sorted('id', true);
@@ -48,6 +58,29 @@ readAllExpeditions() {
   });
 }
 
+renderDeleteAlert(expeditionID) {
+  Alert.alert(
+    'Внимание!',
+    'СИГУРНИ ли сте, че желаете да изтриете избраното издирване, заедно с всички данни?',
+    [
+      { text: 'Yes', onPress: () => { this.deleteData(expeditionID); } },
+      { text: 'No', onPress: () => {}, style: 'cancel' },
+    ],
+    { cancelable: false }
+  );
+}
+
+deleteData(id) {
+    console.log('delete current index:', id);
+    const allExpeditions = realm.objects('Expedition');
+    const currExpedition = allExpeditions.filtered(`id=${id}`)[0];
+    realm.write(() => {
+      realm.delete(currExpedition); // Delete current expedition from database
+    this.readAllExpeditions();
+  }
+  );
+}
+
 renderNewExpedition() {
   return (
     <TouchableOpacity
@@ -57,42 +90,67 @@ renderNewExpedition() {
       });
     }}
     >
-      <Card>
-        <CardSection>
+      <Card flexDirection='row'>
           <View style={thumbnailContainerStyle} >
-            <Ionicons name={'ios-add'} size={50} color={'tomato'} />
+            <Icon name={'ios-add'} size={50} color={'tomato'} />
           </View>
           <View style={headerContentStyle} >
-            <Text style={headerTextStyle}>{' Добавете издирване '}</Text>
+            <Text style={headerTextStyle}>{' Добавете  ново издирване '}</Text>
             <Text>{ ' Съдържа тракове, точки и други данни '}</Text>
           </View>
-        </CardSection>
       </Card>
     </TouchableOpacity>
   );
 }
 
+renderListItem = ({ rowData, rowMap }) => (
+      <ListItem
+        containerStyle={styles.rowFront}
+        title={rowData.item.expeditionName}
+        subtitle={getFormattedDate(rowData.item.startDate)}
+        onPress={() => this.onPressListItem(rowData)}
+      />
+  );
+
+  renderListHiddenItem = ({ rowData, rowMap }) => (
+      <View style={styles.rowBack}>
+          <TouchableOpacity onPress={() => this.renderDeleteAlert(rowData.item.id)}>
+              <Icon name={'ios-trash'} size={50} color={'tomato'} />
+          </TouchableOpacity>
+      </View>
+    );
 
   renderExpeditions() {
-    return this.state.expeditions.map(expedition =>
-      <SwipableExpeditionCard
-        key={expedition.id}
-        expedition={expedition}
-        navigation={this.props.navigation}
-        fieldChange={this.readAllExpeditions.bind(this)}
-      />);
+      return (
+        <Card
+          titleStyle={{ paddingTop: 12 }}
+          dividerStyle={{ height: 3, marginBottom: 2, marginLeft: 10, marginRight: 10 }}
+          containerStyle={{ padding: 0, margin: 0, marginTop: 15 }}
+          title='Записани издирвания: '
+        >
+          <SwipeListView
+            useFlatList
+            data={this.state.expeditions}
+            renderItem={(rowData, rowMap) => this.renderListItem({ rowData, rowMap })}
+            renderHiddenItem={(rowData, rowMap) => this.renderListHiddenItem({ rowData, rowMap })}
+            leftOpenValue={75}
+            disableLeftSwipe
+            onRowOpen={(rowKey, rowMap) => {
+                setTimeout(() => {
+                    rowMap[rowKey].closeRow();
+                }, 5000);
+            }}
+            keyExtractor={item => `${item.id}`}
+          />
+        </Card>
+    );
   }
 
   render() {
       return (
       <View>
-         {this.renderNewExpedition()}
-        <View style={headerViewStyle}>
-          <Text style={headerTextStyle}>{' Записани издирвания: '}</Text>
-        </View>
-          <ScrollView style={{ marginTop: 3 }}>
-              {this.renderExpeditions()}
-          </ScrollView>
+        {this.renderNewExpedition()}
+        {this.renderExpeditions()}
       </View>
     );
   }
@@ -109,6 +167,7 @@ const styles = {
     alignItems: 'center',
     height: 45,
     marginTop: 10,
+    marginBottom: 10,
     paddingTop: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -133,7 +192,18 @@ const styles = {
     alignItems: 'center',
     marginLeft: 4,
     marginRight: 15
-  }
+  },
+  rowFront: {
+    backgroundColor: 'white',
+  },
+  rowBack: {
+    alignItems: 'center',
+    backgroundColor: 'antiquewhite',
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingLeft: 15,
+  },
 };
 
 const { headerContentStyle,

@@ -1,26 +1,12 @@
 import React, { Component } from 'react';
-import { AppState, NetInfo, YellowBox, Alert } from 'react-native';
-import { View } from 'native-base';
-import { realm } from './components/RealmSchema';
-import { refreshTokenEndpoint } from './components/constants';
-import Nav from './Nav';
+import { AppState, NetInfo, Alert, StyleSheet, Text, Platform } from 'react-native';
+import { Container, Content, Spinner } from 'native-base';
+import { realm } from '../components/RealmSchema';
+import { refreshTokenEndpoint } from '../components/constants';
 
-YellowBox.ignoreWarnings([
-  'Warning: isMounted(...) is deprecated',
-  'Module RCTImageLoader'
-]);
+class ScreenSplash extends Component {
 
-class App extends Component {
-  constructor() {
-      super();
-      //Defining global variables
-      global.ct = ''; //Current access token. This is also flag for valid credentials
-      global.crt = ''; //Current refresh token
-      global.dbVerAKB = ''; //The actual (last) databse version of AKB-GIS
-      this.state = { appState: '',
-                      connectionState: '',
-                      authState: '' };
-  }
+  state = { appState: '', connectionState: '', authState: '' }
 
   componentDidMount() {
     AppState.addEventListener('change', this.handleAppStateChange);
@@ -30,40 +16,39 @@ class App extends Component {
   componentWillUnMount() {
     AppState.removeEventListener('change', this.handleAppStateChange);
     NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
+    console.log('Loading Screen Unmount');
   }
 
-  /* АВТЕНТИКАЦИЯ
-=======================
-  */
+  //Event listener for app's state (AppState component)
+  //https://stackoverflow.com/questions/38962034/how-to-detect-when-a-react-native-app-is-closed-not-suspended
+   handleAppStateChange = (nextAppState) => {
+      this.setState({ appState: nextAppState });
+   }
 
-  handleAppStateChange = (nextAppState) => {
-     this.setState({ appState: nextAppState });
-  }
+   handleAuthStateChange = (currentAuthState) => {
+      this.setState({ authState: currentAuthState });
+      console.log(`Auth state changed to:${currentAuthState}`);
+   }
 
-  //Event listener for NetInfo component
-  handleConnectivityChange = (connectionInfo) => {
-     //console.log('Connectivity change: type=' + connectionInfo.type + ', effective type='
-     //+ connectionInfo.effectiveType);
-     //netInfo = connectionInfo;
-     this.setState({ connectionState: connectionInfo });
-     //For development purposes only - да се замени с икона
+   //Event listener for NetInfo component
+   handleConnectivityChange = (connectionInfo) => {
+      //console.log('Connectivity change: type=' + connectionInfo.type + ', effective type='
+      //+ connectionInfo.effectiveType);
+      //netInfo = connectionInfo;
+      this.setState({ connectionState: connectionInfo });
+      //For development purposes only - да се замени с икона
 
-     if (this.connected()) { // there is internet connection
-         //this.doAccessTokenRefresh('handleConnectivityChange');
-     } else {
-         global.ct = ''; //Flag for closed communication chanel to AKB GIS
-     }
-  }
+      if (this.connected()) {    // there is internet connection
+          this.doAccessTokenRefresh('handleConnectivityChange');
+      } else {
+          global.ct = '';  //Flag for closed communication chanel to AKB GIS
+      }
+   }
 
-  handleAuthStateChange = (currentAuthState) => {
-     this.setState({ authState: currentAuthState });
-     console.log(`Auth state changed to:${currentAuthState}`);
-  }
-
-  connected = () =>
-      //Return true, if there is internet connection
-       !(this.state.connectionState.type === 'none' ||
-         this.state.connectionState.type === 'unknown')
+   connected = () =>
+       //Return true, if there is internet connection
+        !(this.state.connectionState.type === 'none' ||
+          this.state.connectionState.type === 'unknown')
 
   doAccessTokenRefresh = (callFrom) => {
      const refreshAT = (refreshToken) => {
@@ -195,16 +180,68 @@ class App extends Component {
      });
   }
 
+  renderNetworkConnection() {
+    switch (this.state.connectionState.type) {
+        case 'none' || 'unknown':
+          return <Text>  Връзка с интернет: НЯМА </Text>;
+        case 'wifi':
+          return <Text>  Връзка с интернет: Безжична мрежа (WiFi) </Text>;
+        case 'cellular':
+          return (<Text> Връзка с интернет: През мрежата на мобилния оператор
+            ({this.state.connectionState.EffectiveConnectionType}) </Text>);
+        default:
+          return <Text>  Връзка с интернет: Нeвъзможно да се установи </Text>;
+    }
+  }
 
-    render() {
+  renderAuthState() {
+    switch (this.state.authState) {
+        case 'ongoing':
+        return <Text>  Автентикация за АКБ: Извършва се проверка... </Text>;
+        case 'authenticated':
+          return <Text>  Автентикация за АКБ: Успешна! </Text>;
+        default:
+          return <Text>  Автентикация за АКБ: Неуспешна с грешка... </Text>;
+    }
+  }
+
+  render() {
       return (
-        <View style={{ flex: 1 }}>
-          <Nav
-            screenProps={this.state.authState}
-          />
-        </View>
+        <Container style={styles.classMainContainer}>
+          <Content style={styles.classView}>
+            <Spinner color='white' />
+            {this.renderNetworkConnection()}
+            {this.renderAuthState()}
+          </Content>
+        </Container>
     );
   }
+
 }
 
-export default App;
+//const realm = this.props.navigation.getParam(realm);
+
+const styles = StyleSheet.create(
+{
+    classMainContainer:
+    {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: (Platform.OS === 'ios') ? 20 : 0
+    },
+
+    classView:
+    {
+        backgroundColor: 'powderblue',
+        //justifyContent: 'center',
+        flex: 1,
+        margin: 10,
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+    },
+
+});
+
+export { ScreenSplash };

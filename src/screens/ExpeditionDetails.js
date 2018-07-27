@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Modal from 'react-native-modal';
-import { Icon } from 'native-base';
-import { Card, CardSection } from '../components/common';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { Card } from 'react-native-elements';
 import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
 // функция, която връща следващ идентификатор за запис в базата
@@ -122,13 +122,13 @@ renderModalEditExpedition() {
 renderCardEditExpedition() {
     const { expeditionTitle, startDate, leaderName } = this.state;
     return (
-      <Card>
-        <CardSection style={{ justifyContent: 'space-between' }}>
+      <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
           <View style={thumbnailContainerStyle} >
             <Icon
-              ios='ios-bookmark'
-              android='md-bookmark'
-              style={{ fontSize: 50, color: 'navy' }}
+              name={'ios-bookmark'}
+              md={'md-bookmark'}
+              size={50}
+              color={'navy'}
             />
           </View>
           <View style={headerContentStyle} >
@@ -138,19 +138,28 @@ renderCardEditExpedition() {
           </View>
           <TouchableOpacity onPress={this.toggleModal}>
             <Icon
-              ios='ios-more'
-              android='md-more'
-              style={{ fontSize: 50, color: 'tomato' }}
+              name={'ios-more'}
+              md={'md-more'}
+              size={50}
+              color={'tomato'}
             />
           </TouchableOpacity>
-        </CardSection>
       </Card>
     );
   }
 
 renderTracks() {
     if (this.state.tracks) {
-      return <MultiSelectList data={this.state.tracks} />;
+      return (
+        <Card
+          titleStyle={{ paddingTop: 12 }}
+          dividerStyle={{ marginBottom: 2, marginLeft: 10, marginRight: 10 }}
+          containerStyle={{ padding: 0, margin: 0, marginTop: 15 }}
+          title='Записани тракове: '
+        >
+          <MultiSelectList data={this.state.tracks} />
+        </Card>
+      );
     }
   }
 
@@ -159,9 +168,6 @@ render() {
         <View>
            <View>
              {this.renderCardEditExpedition()}
-           </View>
-           <View style={headerViewStyle}>
-             <Text style={headerTextStyle}>{' Записани тракове: '}</Text>
            </View>
            <View>
              {this.renderTracks()}

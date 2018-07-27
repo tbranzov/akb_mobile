@@ -1,247 +1,263 @@
+/* Usage:
+
+Екранът, зареждан при стартиране на приложението. Извиква се от навигатора ( виж Nav.js)
+
+*/
+
 import React, { Component } from 'react';
-import { AppState, NetInfo, Alert, StyleSheet, Text, Platform } from 'react-native';
-import { Container, Content, Spinner } from 'native-base';
-import { realm } from '../components/RealmSchema';
-import { refreshTokenEndpoint } from '../components/constants';
+import { AppState, NetInfo, View, Image } from 'react-native';
+import { Button, Text, Icon } from 'react-native-elements';
+import { AuthHandler } from '../components/AuthHandler';
+import { authStatusNoComm,
+            authStatusSuccess,
+            authStatusUnsuccess,
+            authStatusInProgress,
+            authStatusUnsuccessNoCred
+          } from '../components/constants';
+
 
 class ScreenSplash extends Component {
+  // Текстът-заглавие в навигационната лента (горе на екрана)
+  static navigationOptions = ({ navigation }) => ({
+      title: 'Моби АКБ'
+    });
 
-  state = { appState: '', connectionState: '', authState: '' }
+  state = { appState: '',
+            connectionState: '',
+            authState: { Authenticated: 0,
+              infoMessage: authStatusInProgress,
+              authCredentials: '' },
+            loggin: 'busy' }
 
   componentDidMount() {
-    AppState.addEventListener('change', this.handleAppStateChange);
-    NetInfo.addEventListener('connectionChange', this.handleConnectivityChange);
+    this.subs = [
+      this.props.navigation.addListener('didFocus', this.SetStateListeners),
+      this.props.navigation.addListener('willBlur', this.RemoveStateListeners),
+    ];
+  }
+
+  onButtonPress() {
+    this.props.navigation.navigate('App');
+  }
+
+  onLoginFail() {
+    const openLogin = () => {
+        this.props.navigation.navigate('Auth');
+    };
+    this.setState({ loggin: 'idle' });
+    openLogin();
+  }
+
+  onLoginSuccess() {
+    this.setState({
+      loggin: 'idle'
+    });
   }
 
   componentWillUnMount() {
+    this.subs.forEach(sub => sub.remove());
+  }
+
+  SetStateListeners = () => {
+    AppState.addEventListener('change', this.handleAppStateChange);
+    NetInfo.getConnectionInfo().then((connectionInfo) =>
+            this.handleConnectivityChange(connectionInfo));
+  }
+
+  RemoveStateListeners = () => {
     AppState.removeEventListener('change', this.handleAppStateChange);
     NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
-    console.log('Loading Screen Unmount');
   }
 
   //Event listener for app's state (AppState component)
-  //https://stackoverflow.com/questions/38962034/how-to-detect-when-a-react-native-app-is-closed-not-suspended
-   handleAppStateChange = (nextAppState) => {
+  handleAppStateChange = (nextAppState) => {
       this.setState({ appState: nextAppState });
-   }
-
-   handleAuthStateChange = (currentAuthState) => {
-      this.setState({ authState: currentAuthState });
-      console.log('Auth state changed to:' + currentAuthState);
    }
 
    //Event listener for NetInfo component
    handleConnectivityChange = (connectionInfo) => {
-      //console.log('Connectivity change: type=' + connectionInfo.type + ', effective type='
-      //+ connectionInfo.effectiveType);
-      //netInfo = connectionInfo;
       this.setState({ connectionState: connectionInfo });
-      //For development purposes only - да се замени с икона
-
-      if (this.connected()) {    // there is internet connection
-          this.doAccessTokenRefresh('handleConnectivityChange');
-      } else {
-          global.ct = '';  //Flag for closed communication chanel to AKB GIS
-      }
+      NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
+      NetInfo.addEventListener('connectionChange', this.handleConnectivityChange);
    }
 
-   connected = () =>
-       //Return true, if there is internet connection
-        !(this.state.connectionState.type === 'none' ||
-          this.state.connectionState.type === 'unknown')
-
-  doAccessTokenRefresh = (callFrom) => {
-     const refreshAT = (refreshToken) => {
-         this.refreshAccessToken(refreshToken);
-     };
-
-     const openLogin = () => {
-         this.props.navigation.navigate('Auth');
-     };
-
-     //Read user credentials from Realm database to get refresh token for access token
-     //refreshing purpose
-     this.readCredentials()
-         .then((credentials) => {
-             if (credentials === undefined) {
-                 //This happens to application on first start only
-                 console.log('Open Login screen ...');
-                 openLogin(); //Important: refreshAccessToken is NOT visible here
-             } else {
-                 //No matter if access token is valid or not, always update access token
-                 //on application start
-                 refreshAT(credentials.rt); //Important: this.setState is NOT visible here
-             }
-         })
-         .catch((err) => {
-             console.log('Error on reading credentials!', err.toString());
-             Alert.alert(callFrom, `Error on reading credentials!\n${err.toString()}`);
-         });
-  }
-
-  readCredentials = () => {
-      console.log('Reading credentials from Realm database ...');
-      return new Promise((resolve, reject) => {
-          try {
-              const credentials = realm.objects('UserCredentials');
-              resolve(credentials[0]);
-          } catch (e) {
-              reject(e);
-          }
-      });
-   }
-
-   saveCredentials = (name, rt, t, ver) => {
-       console.log('Saving credentials ...');
-       const newCredentials = {
-           userName: name,
-           rt,
-           t,
-       };
-
-       return new Promise((resolve, reject) => {
-           try {
-                 const oldCredentials = realm.objects('UserCredentials');
-
-                 realm.write(() => {
-                     realm.delete(oldCredentials); // Deletes old credentials
-                 });
-
-                 const pars = {
-                     refreshToken: rt,
-                     accessToken: t,
-                     dbVersion: ver,
-                 };
-
-                 realm.write(() => {
-                     realm.create('UserCredentials', newCredentials);
-                 });
-
-                 resolve(pars);
-               } catch (e) {
-                 reject(e);
-           }
-       });
-  }
-
-  refreshAccessToken = (rt) => {
-    console.log('Refreshing access token ...');
-    this.handleAuthStateChange('ongoing');
-
-     global.ct = '';
-     global.crt = '';
-
-     //Alert.alert('Before Fetch');
-     console.log(`RefreshTokenEndpoint: ${refreshTokenEndpoint}`);
-     console.log(`RefreshToken: ${rt}`);
-
-     fetch(refreshTokenEndpoint, {
-             method: 'PUT',
-             headers: {
-                 Accept: 'application/json',
-                 'Content-Type': 'application/json',
-             },
-             body: JSON.stringify({ rt })
-         }
-     )
-     .then(response => response.json())
-     .then((responseJSON) => {
-         console.log('Refresh token available...');
-         console.log(JSON.stringify(responseJSON));
-
-         const bodyJSON = responseJSON;
-
-         if (bodyJSON.meta.success === true) {
-             bodyJSON.meta.accessTokenBeginTime = (new Date()).getTime(); //Future use
-             this.saveCredentials(bodyJSON.data.user.email,
-                                   bodyJSON.data.rt,
-                                   bodyJSON.data.t,
-                                   bodyJSON.meta.version)
-             .then((params) => {
-                 //Initialize global variables
-                 global.crt = params.refreshToken;
-                 global.ct = params.accessToken;
-                 global.dbVerAKB = params.dbVersion;
-                 console.log(`Global credentials state:\n ct=${global.ct},\n crt=${global.crt}`);
-                 this.handleAuthStateChange('authenticated');
-                 this.props.navigation.navigate('App');
-             })
-             .catch((error) => {
-                 console.log(`Error on saving new credentials! ${error.toString()}`);
-             });
-         } else {
-            console.log(`Refresh token error! ${JSON.stringify(bodyJSON.meta.errors)}`);
-            this.props.navigation.navigate('Auth');
-         }
-     })
-
-     .catch((e) => {
-         console.log(`Refresh token error response: ${e.toString()}`);
-     });
+  handlerAuthResult(Result) {
+    console.log(`Handler Auth: ${Result.infoMessage}`);
+     this.setState({ authState:
+                       { Authenticated: Result.Authenticated,
+                         infoMessage: Result.infoMessage,
+                         authCredentials: Result.authCredentials }
+                       });
+    console.log(`Съобщение за статуса на автентикацията: ${this.state.authState.infoMessage}`);
+     if (Result.Authenticated === -1) {
+        this.onLoginFail();
+     } else {
+        this.onLoginSuccess();
+     }
   }
 
   renderNetworkConnection() {
-    switch (this.state.connectionState.type) {
-        case 'none' || 'unknown':
-          return <Text>  Връзка с интернет: НЯМА </Text>;
+    const { connectionState } = this.state;
+    const textHeader = 'Свързаност с интернет:';
+    switch (connectionState.type) {
+        case 'none':
+          return message(textHeader, 'НЯМА', 'ios-wifi', 'tomato');
+        case 'unknown':
+          return message(textHeader, 'Установява се', 'ios-wifi', 'yellow');
         case 'wifi':
-          return <Text>  Връзка с интернет: Безжична мрежа (WiFi) </Text>;
+          return message(textHeader, 'Безжична мрежа (WiFi)', 'ios-wifi', 'teal');
         case 'cellular':
-          return (<Text> Връзка с интернет: През мрежата на мобилния оператор
-            ({this.state.connectionState.EffectiveConnectionType}) </Text>);
+          return message(textHeader,
+            `През мрежата на мобилния оператор (${connectionState.EffectiveConnectionType})`,
+            'ios-wifi', 'teal');
         default:
-          return <Text>  Връзка с интернет: Нeвъзможно да се установи </Text>;
+          return message(textHeader, 'Нeвъзможно да се установи ', 'ios-wifi', 'yellow');
     }
   }
 
   renderAuthState() {
-    switch (this.state.authState) {
-        case 'ongoing':
-        return <Text>  Автентикация за АКБ: Извършва се проверка... </Text>;
-        case 'authenticated':
-          return <Text>  Автентикация за АКБ: Успешна! </Text>;
+    const textHeader = 'Автентикация в АКБ-ГИС:';
+    switch (this.state.authState.infoMessage) {
+        case authStatusInProgress:
+          return message(textHeader,
+            'Извършва се проверка...',
+            'ios-person',
+            'yellow');
+        case authStatusSuccess:
+          return message(textHeader,
+            `Успешна като ${this.state.authState.authCredentials}!`,
+            'ios-person',
+            'teal');
+        case authStatusNoComm:
+          return message(textHeader,
+            'Неуспешна! Не e налична свързаност с интернет. ',
+            'ios-person',
+            'yellow');
         default:
-          return <Text>  Автентикация за АКБ: Неуспешна с грешка... </Text>;
+          return message(textHeader,
+            'Неуспешна с грешка...',
+            'ios-person',
+            'tomato');
     }
   }
 
-  render() {
-      return (
-        <Container style={styles.classMainContainer}>
-          <Content style={styles.classView}>
-            <Spinner color='white' />
-            {this.renderNetworkConnection()}
-            {this.renderAuthState()}
-          </Content>
-        </Container>
-    );
-  }
+  renderButton() {
+    if (this.state.loggin === 'busy' || this.state.authState.infoMessage === authStatusInProgress) {
+       return (
+         <Button
+            backgroundColor='#03A9F4'
+            title='Проверка на състоянието'
+            loading
+         />
+      );
+    }
 
+     return (
+       <Button
+          backgroundColor='#03A9F4'
+          buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
+          onPress={this.onButtonPress.bind(this)}
+          title={this.state.authState.authCredentials ?
+          `Продължи като ${this.state.authState.authCredentials}` :
+          'Продължи без разпознаване в АКБ'}
+       />
+      );
 }
 
-//const realm = this.props.navigation.getParam(realm);
+  render() {
+      return (
+        <View style={styles.container}>
+          <View style={styles.containerImage}>
+            <Image
+              source={require('../img/logo_fest_transp.png')}
+              style={{ width: '95%', padding: 25, margin: 10 }}
+            />
+          </View>
+          <View style={styles.containerData}>
 
-const styles = StyleSheet.create(
-{
-    classMainContainer:
-    {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingTop: (Platform.OS === 'ios') ? 20 : 0
+            {this.renderNetworkConnection()}
+
+            <AuthHandler
+              Reason='SplashScreen'
+              Result={this.handlerAuthResult.bind(this)}
+              Comm={this.state.connectionState.type}
+            >
+               {this.renderAuthState()}
+            </AuthHandler>
+          </View>
+          <View style={styles.containerButton}>
+                {this.renderButton()}
+          </View>
+        </View>
+    );
+  }
+}
+
+const styles = {
+  container: {
+     flex: 1,
+     flexDirection: 'column',
+     alignItems: 'flex-start',
+     justifyContent: 'flex-start',
+     backgroundColor: 'ghostwhite',
+     margin: 0,
+     padding: 0
+   },
+   containerImage: {
+      flex: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      marginTop: 40,
+      marginBottom: 40,
     },
-
-    classView:
-    {
-        backgroundColor: 'powderblue',
-        //justifyContent: 'center',
-        flex: 1,
+   containerData: {
+      flex: 4,
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      backgroundColor: 'ghostwhite',
+      margin: 0,
+      padding: 2
+    },
+    containerButton: {
+       flex: 1,
+       width: '100%',
+       alignItems: 'center',
+       justifyContent: 'center',
+       backgroundColor: 'ghostwhite',
+       margin: 0,
+       padding: 0
+     },
+     containerMessage: {
+        flexDirection: 'column',
         margin: 10,
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-    },
+        padding: 2
+      },
+      textMessage: {
+        color: 'lightslategray',
+        fontSize: 18,
+       },
+      headerMessage: {
+       color: 'darkslategrey',
+      },
+};
 
-});
+const message = (textHeader, textMessage, msgIcon, clrIcon) => (
+    <View style={styles.containerMessage}>
+      <View>
+        <Icon
+          name={msgIcon}
+          size={50}
+          type='ionicon'
+          color={clrIcon}
+        />
+      </View>
+      <View>
+        <Text h4 style={styles.headerMessage}> {textHeader} </Text>
+        <Text style={styles.textMessage}> {textMessage} </Text>
+      </View>
+    </View>
+  );
 
 export { ScreenSplash };
