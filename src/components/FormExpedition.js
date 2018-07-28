@@ -20,9 +20,10 @@ class FormExpedition extends Component {
   state = { expeditionTitle: '',
             leaderName: '',
             dateStart: '',
-            numberOfDays: '',
+            numberOfDays: 1,
             regionCoordinates: '',
             regionFeatures: '',
+            zoom: 14,
             regionDescription: '',
             dataMode: '',
             dataChanged: false,
@@ -33,7 +34,7 @@ class FormExpedition extends Component {
     if (this.props.recordMode === 2) {
       try {
         const currExpedition =
-        realm.objects('Expedition').filtered(`id=${this.props.expeditionID.toString()}`)[0];
+          realm.objects('Expedition').filtered(`id=${this.props.expeditionID.toString()}`)[0];
         this.setState({ error: '',
                         loading: false,
                         expeditionTitle: currExpedition.expeditionName,
@@ -41,6 +42,9 @@ class FormExpedition extends Component {
                         dateStart: currExpedition.startDate,
                         numberOfDays: parseInt(currExpedition.days, 10),
                         regionDescription: currExpedition.regionDescription,
+                        regionCoordinates: currExpedition.regionCoordinates,
+                        regionFeatures: currExpedition.regionFeatures,
+                        zoom: currExpedition.regionZoom
                        });
       } catch (e) {
         console.log(e);
@@ -115,6 +119,7 @@ class FormExpedition extends Component {
       expeditionRec.regionZoom = regionZoom;
       expeditionRec.regionFeatures = regionFeatures;
       expeditionRec.id = expeditionID;
+      expeditionRec.userRole = 'member';
       expeditionRec.expeditionName = expeditionTitle;
       expeditionRec.leaderName = leaderName;
       expeditionRec.startDate = new Date(dateStart);
@@ -122,6 +127,7 @@ class FormExpedition extends Component {
       expeditionRec.regionDescription = regionDescription;
       expeditionRec.tracks = [];
       expeditionRec.checkPoints = [];
+      expeditionRec.photos = [];
       expeditionRec.sinchronized = false;
 
         try {
@@ -143,6 +149,16 @@ class FormExpedition extends Component {
             currExpedition.days = parseInt(numberOfDays, 10);
             currExpedition.regionDescription = regionDescription;
           });
+
+          if (this.regionCoordsChanged === true) {
+              currExpedition.regionCoordinates = JSON.stringify(regionCoordinates);
+              currExpedition.regionZoom = regionZoom;
+          }
+
+          if (this.featuresChanged === true) {
+              currExpedition.regionFeatures = regionFeatures;
+          }
+
           resolve(this.onEditSuccess(currExpedition));
         } catch (e) {
           reject(e);
@@ -237,7 +253,6 @@ class FormExpedition extends Component {
       </Container>
      );
   }
-
 }
 
 const styles = {

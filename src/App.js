@@ -16,6 +16,7 @@ class App extends Component {
       //Defining global variables
       global.ct = ''; //Current access token. This is also flag for valid credentials
       global.crt = ''; //Current refresh token
+      global.refToWebView = 'null';
       global.dbVerAKB = ''; //The actual (last) databse version of AKB-GIS
       this.state = { appState: '',
                       connectionState: '',

@@ -1,19 +1,31 @@
 import RNMessageChannel from 'react-native-webview-messaging';
 
+/*
+var fontAwesome = new FontFace('FontAwesome', 'url(FontAwesome.ttf)');
+fontAwesome.load().then(function(font){
+  // with canvas, if this is ommited won't work
+  document.fonts.add(font);
+});
+*/
+
 const minAccuracy = 25;
-const positionZIndex = 1;
-const areapoligonZIndex = 2;
-const expeditiondataZIndex = 3;
-const trackpointZIndex = 4;
-const checkpointZIndex = 5;
+const tilesZIndex = 0;
+const positionZIndex = 2;
+const areapoligonZIndex = 3;
+const featuresZIndex = 4;
+const expeditiondataZIndex = 5;
+const trackpointZIndex = 6;
+const checkpointZIndex = 7;
 
 //const helloBtn = document.querySelector('#hello');
 const clearBtn = document.querySelector('#clear');
 const pointBtn = document.querySelector('#point');
+const changeTilesBtn = document.querySelector('#tiles');
+const changeEPSGBtn = document.querySelector('#epsg');
 const closeOverlayBtn = document.querySelector('#close_overlay');
 //const jsonBtn = document.querySelector('#json');
 //const eventBtn = document.querySelector('#event');
-const messagesContainer = document.querySelector('p');
+const messagesContainer = document.querySelector('#title');
 const chbPositioning = document.getElementById('start_tracking');
 const chbNearestTrackPoint = document.getElementById('track_point');
 const chbViewPosCoordinates = document.getElementById('view_pos_coords');
@@ -21,12 +33,61 @@ const chbViewCornerCoordinates = document.getElementById('view_corner_coords');
 const chbSaveTrack = document.getElementById('save_track');
 const chbViewTrack = document.getElementById('view_track');
 const chbViewCheckpoints = document.getElementById('view_checkpoints');
+const chbZoomTreshold = document.getElementById('zoom_treshold');
 const accuracyElement = document.getElementById('accuracy');
+const zoomElement = document.getElementById('zoom');
 const onClickOverlay = document.getElementById('onclick_overlay');
+
+const zoomTreshold = 15;
+const coordSofia = [2601359.913790558, 5262826.329090097];
+
+var coordType = 'EPSG-3857'; //EPSG-4326 <- Geographic coordinates; EPSG-3857 <- projection coords
+
+var accessToken = '';
+var sourceTopo50K = new ol.source.TileWMS({
+					url: 'http://93.152.172.53/wms?t=' + accessToken,
+					params: {
+						'LAYERS': 'bgtopo50k',
+						'TILED': true,
+						'FORMAT': 'image/png',
+						'TRANSPARENT': false,
+						'MAP': 'raster.map'
+					}
+				});
+var sourceOSM = new ol.source.OSM();
+
+RNMessageChannel.on('transferAccessToken', (data) => {
+	accessToken = data.payload.accessToken;
+	sourceTopo50K.setUrl('http://93.152.172.53/wms?t=' + accessToken);
+	// Change to xyz url..
+	//sourceTopo50K.setUrl('http://otile1.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg');
+	//see also https://stackoverflow.com/questions/46032026/how-to-change-a-open-layer-tile-source
+});
+
+var coordiatesToString = function(coords) {
+	var coordStr;
+	if (coordType == 'EPSG-4326') {
+		// transform it to decimal degrees
+		var degrees = ol.proj.transform(coords, 'EPSG:3857', 'EPSG:4326');
+		// format a human readable version
+		coordStr = ol.coordinate.toStringHDMS(degrees);
+	} else {
+		coordStr = ol.coordinate.toStringXY(coords,9);
+	};
+	return coordStr;
+};
 
 function el(id) {
 	return document.getElementById(id);
 };
+
+changeEPSGBtn.addEventListener('click', () => {
+	if (coordType == 'EPSG-4326') {
+		coordType = 'EPSG-3857';
+	} else {
+		coordType = 'EPSG-4326';
+	};
+});
 
 //Expedition data are all tracks and check-points
 var expeditiondataLayer;
@@ -42,7 +103,7 @@ var expeditiondataStyle = new ol.style.Style({
 	})
 });
 
-/* This is fully valid snipped - checkpoint is a circle filled with red color and with blue border
+/* This is a fully valid style - checkpoint is a circle filled with red color and with blue border
 var checkPointStyle = new ol.style.Style({
 	image: new ol.style.Circle({
 		radius: 4,
@@ -56,7 +117,9 @@ var checkPointStyle = new ol.style.Style({
 	}),
 });
 */
+
 //https://openlayers.org/en/latest/examples/regularshape.html
+/* Valid style - star
 var checkPointStyle = new ol.style.Style({
 	image: new ol.style.RegularShape({
 		radius: 10,
@@ -72,7 +135,30 @@ var checkPointStyle = new ol.style.Style({
 		})
 	}),
 });
+*/
+var checkPointStyle = new ol.style.Style({
+	text: new ol.style.Text({
+		text: '\uf041',
+		font: 'normal 24px "FontAwesome"',
+		textBaseline: 'bottom',
+		fill: new ol.style.Fill({
+			color: 'red',
+		})
+	})
+	/* When image file is used
+	image: new ol.style.Icon(({
+		anchor: [0.5, 256],
+		//anchorOrigin: 'bottom-left',
+		scale: 0.15,
+		anchorXUnits: 'fraction',
+		anchorYUnits: 'pixels',
+		//opacity: 0.75,
+		src: 'marker1.png'
+	}))
+	*/
+});
 
+/* Valid style - star
 var checkPointStyle2 = new ol.style.Style({
 	image: new ol.style.RegularShape({
 		radius: 10,
@@ -88,11 +174,50 @@ var checkPointStyle2 = new ol.style.Style({
 		})
 	}),
 });
+*/
+var checkPointStyle2 = new ol.style.Style({
+	text: new ol.style.Text({
+		text: '\uf041',
+		font: 'normal 24px "FontAwesome"',
+		textBaseline: 'bottom',
+		fill: new ol.style.Fill({
+			color: 'blue',
+		})
+	})
+	/* When image file is used
+	image: new ol.style.Icon(({
+		anchor: [0.5, 256],
+		//anchorOrigin: 'bottom-left',
+		scale: 0.15,
+		anchorXUnits: 'fraction',
+		anchorYUnits: 'pixels',
+		//opacity: 0.75,
+		src: 'marker1.png'
+	}))
+	*/
+});
+
+/* Second variant
+var checkPointStyle2 = new ol.style.Style({});
+var img1 = new Image();
+img1.onload = function(evt) {
+	checkPointStyle2.setImage(new ol.style.Icon({
+		anchor: [0, 0],
+		imgSize:[img1.width,img1.height],
+		scale: 0.1,
+		anchorXUnits: 'fraction',
+		anchorYUnits: 'pixels',
+		//opacity: 0.75,
+		img: img1
+	}))
+};
+img1.src = 'marker1.png';
+*/
 
 var clearExpedition = function() {
 	//This operator has to be first
 	if (expeditionAvailable && chbViewCornerCoordinates.checked) {
-		chbViewCornerCoordinates.click(); 
+		chbViewCornerCoordinates.click();
 	};
 
 	messagesContainer.innerHTML = 'No expedition selected';
@@ -118,7 +243,8 @@ var clearExpedition = function() {
 	closeOverlayBtn.disabled = true;
 	pointBtn.disabled = true;
 
-	map.removeLayer(expeditiondataLayer);
+	map.removeLayer(expeditiondataLayer); //Use control which show/hide this layer
+	map.removeLayer(efLayer); //Use control which show/hide this layer
 
 	regionCoordinates = [];
 	regionZoom = 0;
@@ -137,6 +263,12 @@ clearBtn.addEventListener('click', () => {
 	});
 });
 
+var internetConnection = false;
+RNMessageChannel.on('internetConnectionChanged', (connection) => {
+	//alert(JSON.stringify(connection));
+	internetConnection = connection.internet.available;
+});
+
 RNMessageChannel.on('clear-expedition', () => {
 	clearExpedition();
 });
@@ -145,12 +277,6 @@ var bottom_left_overlay = new ol.Overlay({
 	element: el('bottomleftoverlay'),
 	positioning: 'bottom-left',
 });
-
-/*
-helloBtn.addEventListener('click', () => {
-	RNMessageChannel.send('hello from WebView');
-});
-*/
 
 var top_right_overlay = new ol.Overlay({
 	element: el('toprightoverlay'),
@@ -171,6 +297,7 @@ var drawArea = function(ring) {
 	polygonSource.addFeature(polygonFeature);
 
 	areaLayer = new ol.layer.Vector({
+		name: 'ExpeditionArea',
 		source: polygonSource,
 		zIndex: areapoligonZIndex
 	});
@@ -179,19 +306,23 @@ var drawArea = function(ring) {
 	map.addLayer(areaLayer);
 }
 
-var createAreaPolygon = function(cornerCoords) {
+var createRing = function(cornerCoords) {
 	var minx = cornerCoords[0], //bottom-left longitude
 		miny = cornerCoords[1], //bottom-left latitude
 		maxx = cornerCoords[2], //top-right longitude
 		maxy = cornerCoords[3]; //top-right latitude
 
-	var ring = [
+	return [
 		[minx, maxy], // x0
 		[minx, miny], // x1
 		[maxx, miny], // x2
 		[maxx, maxy], // x3
 		[minx, maxy]  // x0
 	];
+}
+
+var createAreaPolygon = function(cornerCoords) {
+	var ring = createRing(cornerCoords);
 
 	drawArea(ring);
 
@@ -210,20 +341,22 @@ chbViewCornerCoordinates.addEventListener('click', () => {
 			//calculateExtent returns an array having bottom left longitude, latitude and top right longitude and latitude.
 			var extent = map.getView().calculateExtent(map.getSize());
 
-			var coords, strCoords, element;
+			var coords, element;
+			//var strCoords;
 
 			coords = [extent[0],extent[1]];
-			strCoords = 'lon: ' + extent[0].toString() + '<br>' + 'lat: ' + extent[1].toString(); //ol.coordinate.toStringXY(coords,9);
 			element = bottom_left_overlay.getElement();
-			element.innerHTML = strCoords;
+			//strCoords = 'lon: ' + extent[0].toString() + '<br>' + 'lat: ' + extent[1].toString(); //ol.coordinate.toStringXY(coords,9);
+			//element.innerHTML = strCoords;
+			element.innerHTML = coordiatesToString(coords);
 			bottom_left_overlay.setPosition(coords);
 			map.addOverlay(bottom_left_overlay);
 
 			coords = [extent[2],extent[3]];
-			strCoords = 'lon: ' + extent[2].toString() + '<br>' + 'lat: ' + extent[3].toString(); //ol.coordinate.toStringXY(coords,9);
 			element = top_right_overlay.getElement();
-			//RNMessageChannel.send('After getElement ' + element);
-			element.innerHTML = strCoords;
+			//strCoords = 'lon: ' + extent[2].toString() + '<br>' + 'lat: ' + extent[3].toString(); //ol.coordinate.toStringXY(coords,9);
+			//element.innerHTML = strCoords;
+			element.innerHTML = coordiatesToString(coords);
 			top_right_overlay.setPosition(coords);
 			map.addOverlay(top_right_overlay);
 
@@ -231,7 +364,6 @@ chbViewCornerCoordinates.addEventListener('click', () => {
 		}
 	} else {
 		removeLayer(areaLayer);
-
 		if (!expeditionAvailable) {
 			map.removeOverlay(top_right_overlay);
 			map.removeOverlay(bottom_left_overlay);
@@ -296,7 +428,7 @@ function waitForProperGeolocation() {
 			positionFeature.setGeometry(coordinates ? new ol.geom.Point(coordinates) : null);
 			accuracyFeature.setGeometry(geolocation.getAccuracyGeometry());
 			accuracy = geolocation.getAccuracy();
-			accuracyElement.innerText = accuracy + ' [m]';
+			accuracyElement.innerText = accuracy.toFixed(3) + ' [m]';
 			accuracy<=minAccuracy ? accuracyElement.style.color = 'black' : accuracyElement.style.color = 'red';
 		}
 		if (accuracy>0 && accuracy<=minAccuracy) {
@@ -310,7 +442,7 @@ function waitForProperGeolocation() {
 			waitForProperGeolocation();
 		}
 	}, 2000);
-} 
+}
 
 var openCheckPointForm = function (coordinates, accuracy) {
 	var datamode = 'new';
@@ -327,7 +459,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 		var x, y, distance = 0.0;
 		var minDistance = 100000.0;
 		var minTrackLocationIndex;
-		
+
 		/* OpenLayers example: Get Coordinates of drawn features
 		// Get the array of features
 		var features = vector.getSource().getFeatures(); // In this case the vector is trackpointsLayer itself
@@ -336,7 +468,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 			alert(feature.getGeometry().getCoordinates());
 		});
 		*/
-		
+
 		for ( i = 0; i < trackPoints.length; i++ ) {
 			// Calculate the distance from current GPS-location to the nearest track-location.
 			trackPointCoordinates = trackPoints[i].getGeometry().getCoordinates();
@@ -353,7 +485,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 		//Get the coordinates of the nearest track-point as current data
 		coordinates = trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();
 		accuracy = trackPointsAccuracy[minTrackLocationIndex];
-	} 
+	}
 
 	//Check for existing check-point coinsiding with the current
 	// 1. track-point (if checkbox chbNearestTrackPoint is checked) or
@@ -381,9 +513,13 @@ var openCheckPointForm = function (coordinates, accuracy) {
 			checkpointId: checkpointId,
 		},
 	});
-}	
+}
 
 /*
+helloBtn.addEventListener('click', () => {
+	RNMessageChannel.send('hello from WebView');
+});
+
 jsonBtn.addEventListener('click', () => {
   RNMessageChannel.sendJSON({
     payload: 'hello'
@@ -409,7 +545,7 @@ RNMessageChannel.on('greetingFromRN', event => {
   messagesContainer.innerHTML = `Received "greetingFromRN" event: ${JSON.stringify(event)}`;
 });
 
-var initialZoom = 19;
+var initialZoom = 10;
 
 var expeditionAvailable = false;
 var expeditionName = '';
@@ -419,13 +555,49 @@ var allTracksPoints = [];//Array for track points of all displaied tracks only
 var allTracksData = []; //Array of objects for displaied tracks only
 
 var trackAvailable = false;
+var trackName = ''; //current track name
 var trackPoints = []; //Array of current track point-coordinates in form of OpenLayers features
 var trackPointsAccuracy = []; //Twin-array for trackPoints - contains the accuracy of the coordinates for one and the same index
-var trackName = ''; //current track name
 
 var checkPoints = [];
 
-RNMessageChannel.on('transferExpeditionData', expedition => {
+//var expeditionFeatures = {}; //Features (in GeoJSON form) colected from other expeditions that fall into current expedition region (fully or partially).
+var efLayer;
+
+var efImage = new ol.style.Circle({
+	radius: 5,
+	fill: null,
+	stroke: new ol.style.Stroke({color: 'red', width: 1})
+});
+
+var efStyles = {
+	'Point': new ol.style.Style({
+		image: efImage
+	}),
+	'LineString': new ol.style.Style({
+		stroke: new ol.style.Stroke({
+			color: 'green',
+			width: 1
+		})
+	}),
+	'Polygon': new ol.style.Style({
+		stroke: new ol.style.Stroke({
+			color: 'blue',
+			lineDash: [4],
+			width: 2
+		}),
+		fill: new ol.style.Fill({
+			color: 'rgba(0, 0, 255, 0.1)'
+		})
+	}),
+};
+
+var styleFunction = function(feature) {
+	return efStyles[feature.getGeometry().getType()];
+};
+
+var processExpeditionData = function(expedition) {
+	alert(JSON.stringify(expedition));
 	if (expedition.payload.expeditionId == 0) {
 		//chbViewCornerCoordinates.disabled = false;
 	} else {
@@ -463,7 +635,7 @@ RNMessageChannel.on('transferExpeditionData', expedition => {
 		var len = expedition.payload.tracks.length; //Number of tracks in current expedition
 
 		removeLayer(expeditiondataLayer);
-		expeditiondataLayer = new ol.layer.Vector();
+		expeditiondataLayer = new ol.layer.Vector({name: 'ExpeditionData',});
 		if (len > 0) {
 			allTracksPoints = [];
 			var pFeature;
@@ -471,7 +643,7 @@ RNMessageChannel.on('transferExpeditionData', expedition => {
 			for (var i=0; i<len; i++) {
 				trPoints = expedition.payload.tracks[i];
 				for (var j=0; j<trPoints.length; j++) {
-					pFeature = new ol.Feature({ 
+					pFeature = new ol.Feature({
 						geometry: new ol.geom.Point([trPoints[j][0], trPoints[j][1]])
 					});
 					pFeature.setStyle(expeditiondataStyle);
@@ -488,25 +660,118 @@ RNMessageChannel.on('transferExpeditionData', expedition => {
 		chbViewCheckpoints.checked = true;
 		removeLayer(checkpointsLayer);
 		checkPoints = [];
-		
+
 		var point_feature, coords;
+		const silent = true;
 		for (var i=0; i<expedition.payload.checkpoints.length; i++){
 			coords = [expedition.payload.checkpoints[i][0], expedition.payload.checkpoints[i][1]];
 			point_feature = new ol.Feature({
 				geometry: new ol.geom.Point(coords)
 			});
 			point_feature.setStyle(checkPointStyle2);
+			point_feature.setId(i);
+			point_feature.setProperties({editable: true}, silent);
 			checkPoints.push(point_feature);
 		};
-		
-		checkpointsLayer = new ol.layer.Vector();
+
+		checkpointsLayer = new ol.layer.Vector({name: 'ExpeditionCheckpoints',});
 		var source = new ol.source.Vector({ features: checkPoints });
 		checkpointsLayer.setSource(source);
 		checkpointsLayer.setZIndex(checkpointZIndex);
 		map.addLayer(checkpointsLayer);
-		
+
+		//expeditionFeatures = expedition.payload.features;
+		//See http://openlayers.org/en/master/examples/geojson.html
+		removeLayer(efLayer);
+		var efSource = new ol.source.Vector({
+			features: (new ol.format.GeoJSON()).readFeatures(expedition.payload.regionFeatures)
+		});
+
+		efLayer = new ol.layer.Vector({
+			name: 'ExpeditionFeatures',
+			source: efSource,
+			style: styleFunction,
+			visible: isFeaturesLayerVisible(view.getZoom())
+		});
+		efLayer.setZIndex(featuresZIndex);
+		map.addLayer(efLayer);
+
 		clearBtn.disabled = false;
 		pointBtn.disabled = false;
+		map.removeOverlay(onclick_overlay);
+		isOnclickOverlayVisible = false;
+		closeOverlayBtn.disabled = true;
+	};
+};
+
+RNMessageChannel.on('transferExpeditionData', expedition => {
+	processExpeditionData(expedition);
+});
+
+var partialData = {};
+RNMessageChannel.on('initPartialTransfer', data => {
+	partialData = {
+		dataType: data.payload.dataType,
+		partsCount: data.payload.partsCount,
+		transferedCount: 0,
+		dataSlots: []
+	};
+	for (var i=0; i<data.payload.partsCount; i++) {
+		partialData.dataSlots.push('empty');
+	};
+});
+
+RNMessageChannel.on('partialTransfer', data => {
+	partialData.transferedCount++;
+	partialData.dataSlots[data.payload.ind] = data.payload.partData;
+
+	var allPartsTransfered = function() {
+		var result = true;
+		for (var i=0; i<partialData.partsCount; i++) {
+			if (partialData.dataSlots[i] == 'empty') {
+				result = false;
+				break;
+			};
+		};
+		return(result);
+	};
+
+	var joinPartialData = function() {
+		return new Promise( (resolve,reject) => {
+			resolve(partialData.dataSlots.join(''));
+			/* Working snipet equivalent to join('')
+			var joinedData = '';
+			for (var i=0; i<partialData.partsCount; i++) {
+				joinedData += partialData.dataSlots[i];
+			};
+			resolve(joinedData);
+			*/
+		});
+	};
+
+	if (partialData.transferedCount == partialData.partsCount) {
+		var timeout = false;
+
+		setTimeout( function() { timeout = true }, 5000);
+
+		do {
+			var ok = allPartsTransfered();
+		}
+		while ((!ok) && (!timeout));
+
+		if (timeout == true) {
+			alert('Error in partial data transfer! Remain in previous expedition state.');
+			return;
+		};
+
+		joinPartialData().then( function(joinedData) {
+			if (partialData.dataType == 'JSON') {
+				processExpeditionData({ payload: JSON.parse(joinedData) });
+			} else {
+				//string data type - for future use
+				//function_To_Process_Str_Data({ payload: joinedData });
+			};
+		});
 	};
 });
 
@@ -555,16 +820,16 @@ RNMessageChannel.on('transferTrackData', track => {
 	};
 
 	trackGeolocationData = track.payload.geoLocations;
-	
+
 	trackAvailable = !track.payload.emptyTrack;
 
 	removeLayer(trackpointsLayer);
 	trackPoints = [];
 	trackPointsAccuracy = [];
 	createTrackpointsLayer();
-	
+
 	var geolocationsCount =  Object.keys(trackGeolocationData).length;
-	
+
 	/*	Show coordinates - for test purposes only
 	var text = "Geolocations <br>";
 	for (i = 0; i < geolocationsCount; i++) {
@@ -575,12 +840,12 @@ RNMessageChannel.on('transferTrackData', track => {
 	};
 	messagesContainer.innerHTML = text;
 	*/
-	
+
 	if (geolocationsCount > 0) {
 		addPointToTrack(firstPointStyle, [trackGeolocationData[0].coordinates[0], trackGeolocationData[0].coordinates[1]]);
 		trackPointsAccuracy[0] = trackGeolocationData[0].accuracy;
 	}
-	
+
 	for (i = 1; i < geolocationsCount; i++) {
 		addPointToTrack(trackPointStyle, [trackGeolocationData[i].coordinates[0], trackGeolocationData[i].coordinates[1]]);
 		trackPointsAccuracy[i] = trackGeolocationData[i].accuracy;
@@ -589,7 +854,7 @@ RNMessageChannel.on('transferTrackData', track => {
 	var s = new ol.source.Vector({ features: trackPoints });
 	trackpointsLayer.setSource(s);
 	addPointLayer(trackpointsLayer);
-	
+
 	view.setZoom(regionZoom);
 
 	if (geolocationsCount > 0) {
@@ -597,9 +862,9 @@ RNMessageChannel.on('transferTrackData', track => {
 			//Center the view at the first point of the track
 			view.setCenter([trackGeolocationData[0].coordinates[0], trackGeolocationData[0].coordinates[1]]);
 		};
-		
+
 		chbNearestTrackPoint.disabled = false;
-	} else { 
+	} else {
 		chbNearestTrackPoint.disabled = true;
 	}
 });
@@ -612,6 +877,8 @@ RNMessageChannel.on('createCheckpoint', payload => {
 			geometry: point_geom
 		});
 		point_feature.setStyle(checkPointStyle);
+		point_feature.setId(checkPoints.length);
+		point_feature.setProperties({editable: true}, true);
 		checkpointsLayer.getSource().addFeature( point_feature );
 		checkPoints.push(point_feature);
 	}
@@ -712,35 +979,79 @@ var firstPointStyle = new ol.style.Style({
 });
 
 var trackpointsLayer;  //Layer for current track only
-function createTrackpointsLayer(){
-  trackpointsLayer = new ol.layer.Vector({ 
-    source: new ol.source.Vector({ features: trackPoints }),
-	zIndex: trackpointZIndex
-  })
-}
+function createTrackpointsLayer() {
+	trackpointsLayer = new ol.layer.Vector({
+		name: 'ExpeditionTracks',
+		source: new ol.source.Vector({ features: trackPoints }),
+		zIndex: trackpointZIndex
+	})
+};
 
 var view = new ol.View({
-		center: [0, 0], //or center: ol.proj.transform([2.1833, 41.3833], 'EPSG:4326', 'EPSG:3857'),
-		rotation: 0,
-		enableRotation: false,
-		zoom: 2
+	center: [0, 0], //or center: ol.proj.transform([2.1833, 41.3833], 'EPSG:4326', 'EPSG:3857'),
+	rotation: 0,
+	enableRotation: false,
+	zoom: 2
+});
+view.setZoom(initialZoom);
+view.setCenter(coordSofia);
+
+var getLayerByName = function(layerName) {
+	var layer;
+	map.getLayers().forEach( function(l) {
+		if (l.get('title') === layerName ) {
+			layer = l;
+		}
 	});
+	return layer;
+};
+
+var visibleTopo50K = true;
+
+changeTilesBtn.addEventListener('click', () => {
+	var layer = getLayerByName('Tiles');
+
+	if (visibleTopo50K == true) {
+		visibleTopo50K = false;
+		layer.setSource(sourceOSM);
+	} else {
+		visibleTopo50K = true;
+		layer.setSource(sourceTopo50K);
+	};
+});
+
+var zoomSlider = new ol.control.ZoomSlider();
+
+//https://openlayers.org/en/latest/examples/scale-line.html
+var scaleLineControl = new ol.control.ScaleLine();
+scaleLineControl.setUnits('metric'); //degrees, imperial inch, us inch, nautical mile
 
 var map = new ol.Map({
 		target: 'map', // The DOM element that will contains the map
 		renderer: 'canvas', // Force the renderer to be used. 'canvas' is default
 		layers: [
 			new ol.layer.Tile({
-				source: new ol.source.OSM()
-			})
+				title: 'Tiles',
+				type: 'base',
+				visible: true,
+				preload: Infinity,
+				source: sourceTopo50K,
+				zIndex: tilesZIndex
+			}),
 		],
 		controls: ol.control.defaults({
 			attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
 				collapsible: false
 			})
-		}),
+		}).extend([
+			zoomSlider,
+			scaleLineControl
+		]),
 		view: view
 	});
+
+//Also possible
+//map.addControl(zoomSlider);
 
 var geolocation = new ol.Geolocation({
 		projection: view.getProjection(),
@@ -777,9 +1088,8 @@ chbNearestTrackPoint.addEventListener('change', function() {
 		onClickOverlayCoordinates = trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();
 		//accuracy = trackPointsAccuracy[minTrackLocationIndex];
 
-		var hdms = ol.coordinate.toStringXY(onClickOverlayCoordinates,9);
 		var element = onclick_overlay.getElement();
-		element.innerHTML = hdms;
+		element.innerHTML = coordiatesToString(onClickOverlayCoordinates);
 		onclick_overlay.setPosition(onClickOverlayCoordinates);
 	}
 });
@@ -831,7 +1141,7 @@ chbPositioning.addEventListener('change', function() {
 			}
 		);
 	}
-	
+
 	geolocation.setTracking(this.checked);
 });
 
@@ -843,7 +1153,7 @@ chbSaveTrack.addEventListener('change', function() {
 		}
 		return;
 	}
-	
+
 	if (!chbPositioning.checked) {
 		if (this.checked) {
 			this.checked = false;
@@ -869,6 +1179,10 @@ chbViewCheckpoints.addEventListener('change', function() {
 	};
 });
 
+chbZoomTreshold.addEventListener('change', function() {
+	efLayer.setVisible(isFeaturesLayerVisible(view.getZoom()));
+});
+
 var isOnclickOverlayVisible = false;
 var isOnclickOverlayReady = true;
 function allowOnclickOverlay() {
@@ -876,29 +1190,84 @@ function allowOnclickOverlay() {
 };
 
 var onClickOverlayCoordinates;
-onClickOverlay.addEventListener('click',
-	function() {
-		if (expeditionAvailable && isOnclickOverlayReady) {
-			RNMessageChannel.sendJSON({
-				command: 'execute',
-				payload: {
-					functionName: 'pointControl',
-					geolocation: {
-						coordinates: onClickOverlayCoordinates,
-						accuracy: 0
-					},
-					datamode: 'new',
-					checkpointId: -1,
+var clickEvent = null;
+onClickOverlay.ondblclick = function (evt) {
+	if (isOnclickOverlayVisible) {
+		clickEvent = null;
+		alert('This is "dblclick" event.');
+	};
+};
+
+onClickOverlay.onclick = function(evt) {
+	clickEvent = evt;
+	setTimeout(click_action, 300);
+};
+
+var click_action = function () {
+    if(clickEvent == null){
+		return;
+	};
+    var evt = clickEvent;
+
+	if (expeditionAvailable && isOnclickOverlayReady) {
+		RNMessageChannel.sendJSON({
+			command: 'execute',
+			payload: {
+				functionName: 'pointControl',
+				geolocation: {
+					coordinates: onClickOverlayCoordinates,
+					accuracy: 0
 				},
-			});
-		}
+				datamode: 'new',
+				checkpointId: -1,
+			},
+		});
 	}
-);
-/*
-onClickOverlay.addEventListener('dblclick', function () {
-	alert('Double click over overlay');
+};
+
+onClickOverlay.oncontextmenu = function(evt) {
+	alert('This is "oncontextmenu" ("rightclick") event.');
+    return false;
+};
+
+//Similar example, but for browser and mouse -> http://jsfiddle.net/rnzgfg89/6/
+var overlayDx = null;
+var overlayDy = null;
+onClickOverlay.addEventListener('touchstart', function(evt) {
+	var enabledTouchendEvent = false;
+	function move(evt) {
+		var coords = map.getEventCoordinate(evt);
+
+		if (overlayDx == null) {
+			overlayDx = coords[0] - onClickOverlayCoordinates[0];
+			overlayDy = coords[1] - onClickOverlayCoordinates[1];
+		};
+
+		coords[0] -= overlayDx;
+		coords[1] -= overlayDy;
+
+		onClickOverlayCoordinates = coords;
+		var element = onclick_overlay.getElement();
+		element.innerHTML = coordiatesToString(onClickOverlayCoordinates);
+		onclick_overlay.setPosition(onClickOverlayCoordinates);
+		enabledTouchendEvent = true;
+	};
+
+	function end(evt) {
+		overlayDx = null;
+		window.removeEventListener('touchmove', move);
+		window.removeEventListener('touchend', end);
+
+		if (enabledTouchendEvent) {
+			//alert('This is "touchend" event.');
+			// Do something here ...
+			enabledTouchendEvent = false;
+		}
+	};
+
+	window.addEventListener('touchmove', move);
+	window.addEventListener('touchend', end);
 });
-*/
 
 chbViewPosCoordinates.addEventListener('click', function() {
 	if (!this.checked) {
@@ -911,8 +1280,8 @@ chbViewPosCoordinates.addEventListener('click', function() {
 geolocation.on('change', function() {
 	positionChanged = true;
 	var accuracy = geolocation.getAccuracy();
-	  
-	accuracyElement.innerText = accuracy + ' [m]';
+
+	accuracyElement.innerText = accuracy.toFixed(3) + ' [m]';
 	accuracy<=minAccuracy ? accuracyElement.style.color = 'black' : accuracyElement.style.color = 'red';
 	//RNMessageChannel.send(String(accuracy));
 
@@ -935,7 +1304,7 @@ geolocation.on('change:accuracyGeometry', function() {
 });
 
 function addPointToTrack(style,coords) {
-	var trackPointFeature = new ol.Feature({ 
+	var trackPointFeature = new ol.Feature({
 		//geometry: new ol.geom.Point(ol.proj.transform(coords, 'EPSG:4326', 'EPSG:3857'))
 		geometry: new ol.geom.Point(coords)
 	});
@@ -945,7 +1314,6 @@ function addPointToTrack(style,coords) {
 
 geolocation.once('change:position', function() {
 	//view.setCenter(geolocation.getPosition());
-	view.setZoom(initialZoom);
 });
 
 var coord_overlay = new ol.Overlay({
@@ -966,7 +1334,13 @@ geolocation.on('change:position', function() {
 	if (chbSaveTrack.checked) {
 		RNMessageChannel.sendJSON({
 			command: 'execute',
-			payload: {functionName: 'saveGeolocation', geolocation: {coordinates: coordinates, accuracy: accuracy}},
+			payload: {
+				functionName: 'saveGeolocation',
+				geolocation: {
+					coordinates: coordinates,
+					accuracy: accuracy
+				}
+			},
 		});
 
 		/* This snippet works fine but it works more slowly then the next one
@@ -984,23 +1358,18 @@ geolocation.on('change:position', function() {
 		point_feature.setStyle(trackPointStyle);
 		trackpointsLayer.getSource().addFeature( point_feature );
 		// end
-		
+
 		//addPointToTrack(trackPointStyle,coordinates);
 		trackPoints.push(point_feature);
 		trackPointsAccuracy.push(accuracy);
-		
+
 		chbNearestTrackPoint.disabled = false;
 	}
-	
+
 	if (chbViewPosCoordinates.checked) {
-		// transform it to decimal degrees
-		//var degrees = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326');
-		// format a human readable version
-		//var hdms = ol.coordinate.toStringHDMS(degrees);
-		var hdms = ol.coordinate.toStringXY(coordinates,9);
 		// update the coord_overlay element's content
 		var element = coord_overlay.getElement();
-		element.innerHTML = hdms;
+		element.innerHTML = coordiatesToString(coordinates);
 		// position the element (using the coordinate in the map's projection)
 		/*
 		var glbox = map.getView().calculateExtent(map.getSize()); // doesn't look as expected.
@@ -1020,6 +1389,7 @@ geolocation.on('change:position', function() {
 
 var positionLayer;
 positionLayer = new ol.layer.Vector({
+	name: 'GPSPosition',
 	map: map,
 	source: new ol.source.Vector({
 		features: [accuracyFeature, positionFeature]
@@ -1050,14 +1420,14 @@ map.on('click', function(event) {
 			var coords = event.coordinate;
 
 			var accuracy = 0;
-			var minDistance = 5.0;
+			//var minDistance = 5.0;
 			var i;
-
 			if (chbNearestTrackPoint.checked) {
 				var trackPointCoordinates;
 				var x, y, distance = 0.0;
 				var minDist = 100000.0; //Local min distance
 				var minTrackLocationIndex;
+				//var line;
 
 				for ( i = 0; i < trackPoints.length; i++ ) {
 					// Calculate the distance from current GPS-location to the nearest track-location.
@@ -1065,6 +1435,11 @@ map.on('click', function(event) {
 					x = trackPointCoordinates[0] - coords[0];
 					y = trackPointCoordinates[1] - coords[1];
 					distance = Math.sqrt( (x*x) + (y*y) );
+					/* Another method with absolutely the same result
+					line =  new ol.geom.LineString([trackPointCoordinates, coords]);
+					distance = line.getLength();
+					*/
+					//alert('coords=' + coords.toString() + '\nchpcoords=' + trackPointCoordinates.toString() + '\ndistance=' + distance.toString());
 
 					//Adjust minDist
 					if (distance < minDist) {
@@ -1075,15 +1450,17 @@ map.on('click', function(event) {
 				//Get the coords of the nearest track-point as current data
 				coords = trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();
 				accuracy = trackPointsAccuracy[minTrackLocationIndex];
-				minDistance = 0.0;
+				//minDistance = 0.0;
 			}
 			onClickOverlayCoordinates = coords;  //Save for global use
 
 			var found = false;
+			/*
 			if (checkPoints.length > 0) {
 			//Check if check-point is tapped
 				var checkPointCoordinates;
-				var x, y, distance = 0.0;
+				var x, y;
+				var distance = 0.0;
 
 				for ( i=checkPoints.length-1; i>=0 ; i-- ) {
 					// Calculate the distance from current GPS-location to the nearest check-point.
@@ -1112,16 +1489,152 @@ map.on('click', function(event) {
 					}
 				}
 			}
-			
+			*/
+
+			/*  Because of unstable results in calculating the distance between two points,
+				next snipet replace the upper one	*/
+			var layerFilter = (layer) => {
+				var layerName = layer.get('name');
+				return (layerName == 'ExpeditionData' || layerName == 'ExpeditionCheckpoints' ||
+						layerName == 'ExpeditionTracks' || layerName == 'ExpeditionFeatures');
+			};
+
+			var features = map.getFeaturesAtPixel(event.pixel, {layerFilter, hitTolerance: 10});
+			/* Second method - the same result
+			var features = [];
+			map.forEachFeatureAtPixel(event.pixel, function(feature,null,null,layerFilter,this) {
+				features.push(feature);
+			});
+			*/
+
+			//Object to be send to react native
+			var featuresAtPixel = {
+				'pixel': event.pixel,
+				'features': []
+			};
+
+			if (features != undefined) {
+				features.map( (featureAtPixel) => {
+					var obj = {};
+					obj.type = featureAtPixel.getGeometry().getType();
+					//if some feature has no id for some reason
+					try {
+						obj.id = featureAtPixel.getId();
+					}
+					catch (e) {};
+
+					//Process checkpoints differently from features
+					var isEditable = featureAtPixel.getProperties().editable == true;
+					if ((!found) && obj.type == 'Point' && isEditable) {
+						found = true;
+						obj.coordinates = featureAtPixel.getGeometry().getCoordinates();
+
+						RNMessageChannel.sendJSON({
+							command: 'execute',
+							payload: {
+								functionName: 'pointControl',
+								geolocation: {
+									coordinates: obj.coordinates,
+									accuracy: accuracy
+								},
+								datamode: 'edit',
+								checkpointId: obj.id,
+							},
+						});
+					};
+
+					//Only features separation
+					var isFeature = !isEditable;
+					if (isFeature) {
+						featuresAtPixel.features.push(obj);
+					};
+				});
+			};
+			/*
+			RNMessageChannel.sendJSON({
+				command: 'test',
+				payload: {featuresAtPixel},
+			});
+			*/
 			if (!found) {
-				// transform it to decimal degrees
-				//var degrees = ol.proj.transform(coords, 'EPSG:3857', 'EPSG:4326');
-				// format a human readable version
-				//var hdms = ol.coordinate.toStringHDMS(degrees);
-				var hdms = ol.coordinate.toStringXY(coords,9);
+				//Process features
+				const fLen = featuresAtPixel.features.length;
+				/*
+				if (fLen > 0) {
+					var typeIndex;
+
+					var typeExist = (typeName) => {
+						var exist = false;
+						for (let i=0; i<fLen; i++) {
+							if (featuresAtPixel.features[i].type == typeName) {
+								exist = true;
+								typeIndex = i;
+								break;
+							};
+						};
+						return exist;
+					};
+
+					if (typeExist('Point')) {
+						RNMessageChannel.sendJSON({
+							command: 'execute',
+							payload: {
+								functionName: 'featureInfo',
+								featureId: featuresAtPixel.features[typeIndex].id
+							}
+						});
+					} else {
+						if (typeExist('LineString')) {
+							RNMessageChannel.sendJSON({
+								command: 'execute',
+								payload: {
+									functionName: 'featureInfo',
+									featureId: featuresAtPixel.features[typeIndex].id
+								}
+							});
+						} else {
+							if (typeExist('Polygon')) {
+								RNMessageChannel.sendJSON({
+									command: 'execute',
+									payload: {
+										functionName: 'featureInfo',
+										featureId: featuresAtPixel.features[typeIndex].id
+									}
+								});
+							};
+						};
+					};
+				};
+				*/
+
+				// Variant 2 - no hierarchy, need menu creation
+
+				if (fLen > 0) {
+					if (fLen == 1) {
+						RNMessageChannel.sendJSON({
+							command: 'execute',
+							payload: {
+								functionName: 'featureInfo',
+								featureId: featuresAtPixel.features[0].id
+							}
+						});
+					} else {
+						RNMessageChannel.sendJSON({
+							command: 'execute',
+							payload: {
+								functionName: 'featureMenu',
+								features: featuresAtPixel
+							},
+						});
+					};
+				};
+
+				// end of variant 2
+				//End of features' processing
+
 				// update the onclick_overlay element's content
 				var element = onclick_overlay.getElement();
-				element.innerHTML = hdms;
+				element.innerHTML = coordiatesToString(coords);
 				// position the element (using the coordinate in the map's projection)
 				onclick_overlay.setPosition(coords);
 
@@ -1145,6 +1658,36 @@ map.on('dblclick', function(event) {
 });
 */
 
-map.getView().on('change:resolution', function() {
-	el('zoom').innerText = map.getView().getZoom();
+//https://openlayers.org/en/latest/examples/moveend.html
+function onMoveEnd(evt) {
+	if (internetConnection == true && view.getZoom() >= 18) {
+		//var map = evt.map;
+		//var extent = map.getView().calculateExtent(map.getSize());
+		var extent = view.calculateExtent(map.getSize());
+		/*
+		var bottomLeft = ol.proj.transform(ol.extent.getBottomLeft(extent),
+			'EPSG:3857', 'EPSG:4326');
+		var topRight = ol.proj.transform(ol.extent.getTopRight(extent),
+			'EPSG:3857', 'EPSG:4326');
+		*/
+		var ring = createRing(extent);
+		RNMessageChannel.sendJSON({
+			command: 'extent-changed',
+			payload: {ring},
+		});
+	}
+};
+map.on('moveend', onMoveEnd);
+
+function isFeaturesLayerVisible(zoom) {
+	return (chbZoomTreshold.checked || (zoom >= zoomTreshold));
+};
+
+view.on('change:resolution', function() {
+	var zoom = view.getZoom();
+	zoomElement.innerText = zoom.toFixed(3);
+
+	if (efLayer != undefined) {
+		efLayer.setVisible(isFeaturesLayerVisible(zoom));
+	};
 });

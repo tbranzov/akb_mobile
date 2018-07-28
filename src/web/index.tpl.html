@@ -6,10 +6,27 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Document</title>
   <style>
-    body {
+	@font-face {
+		font-family: "FontAwesome";
+		src: url(../fonts/FontAwesome.ttf);
+	}
+
+	.myClass::before {
+		font-family: FontAwesome;
+		content: "\f100";
+	}
+
+	.myClass::after {
+		font-family: FontAwesome;
+		content: "\f101";
+	}
+
+	body {
 		text-align: center;
-    }
+	}
+
 	.overlay {
+		-webkit-user-select: none;
 		border: 1px solid black;
 		border-radius: 10px 10px 10px 0px;
 		padding: 5px 10px;
@@ -21,16 +38,19 @@
 
   <link rel="stylesheet" href="geolocation-style.css" type="text/css">
 
+  <!-- <link rel="stylesheet" href="all.css" type="text/css"> -->
 </head>
 <body>
-  <p>No expedition selected</p>
+  <div class="myClass" id="title">No expedition selected</div>
   <div>
     <!-- <button id="hello">Send text to RN</button> -->
-    <button id="clear" disabled="true">Clear</button>
-    <button id="point" disabled="true">Point</button>
+    <button id="clear" disabled="true">Clr</button>
+    <button id="point" disabled="true">Pnt</button>
     <input id="track_point" type="checkbox" disabled="true"/>
-    <label for="track_point">nearest track point</label>
-    <button id="close_overlay" disabled>Close Overlay</button>
+    <label for="track_point">near tr pnt</label>
+    <button id="tiles">Tiles</button>
+    <button id="epsg">EPSG</button>
+    <button id="close_overlay" disabled>Overlay</button>
   </div>
 <!--
   <div>
@@ -57,13 +77,15 @@
     <label for="view_corner_coords">region</label>
     <label for="view_track">
       <input id="view_track" type="checkbox" disabled="true"/>
-	  current track
+	  curr-track
 	</label>
     <input id="view_checkpoints" type="checkbox" disabled="true"/>
-    <label for="view_checkpoints">check-pts</label>
+    <label for="view_checkpoints">pts</label>
+    <input id="zoom_treshold" type="checkbox"/>
+    <label for="zoom_treshold">ft</label>
   </div>
   <div>
-    position accuracy : <code id="accuracy"></code>&nbsp;&nbsp;
+    accuracy : <code id="accuracy"></code>&nbsp;&nbsp;
 <!--
     altitude : <code id="altitude"></code>&nbsp;&nbsp;
     altitude accuracy : <code id="altitudeAccuracy"></code>&nbsp;&nbsp;

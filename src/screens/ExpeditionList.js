@@ -138,6 +138,8 @@ renderListItem = ({ rowData, rowMap }) => (
             onRowOpen={(rowKey, rowMap) => {
                 setTimeout(() => {
                     rowMap[rowKey].closeRow();
+                    //!!! Да се направи проверка за празен списък
+                    //(напр. след изтриване на запис), иначе плюе грешка
                 }, 5000);
             }}
             keyExtractor={item => `${item.id}`}
