@@ -526,7 +526,7 @@ dataCheck(expedition) {
                     recordMode: 2,
      });
      this.features = expedition.regionFeatures;
-     this.areaParameters.areaCoordinates = expedition.regionCoordinates;
+     this.areaParameters.areaCoordinates = JSON.parse(expedition.regionCoordinates);//!!!!ТУККККК
      this.areaParameters.zoom = expedition.regionZoom;
 }
 
