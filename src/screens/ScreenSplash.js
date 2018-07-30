@@ -169,8 +169,9 @@ class ScreenSplash extends Component {
         <View style={styles.container}>
           <View style={styles.containerImage}>
             <Image
-              source={require('../img/logo_fest_transp.png')}
-              style={{ width: '95%', padding: 25, margin: 10 }}
+              source={require('../img/museumFront.jpg')}
+              style={{ width: '100%', padding: 25, margin: 10 }}
+              resizeMode='contain'
             />
           </View>
           <View style={styles.containerData}>
@@ -214,8 +215,8 @@ const styles = {
    containerData: {
       flex: 4,
       width: '100%',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+      justifyContent: 'flex-end',
       backgroundColor: 'ghostwhite',
       margin: 0,
       padding: 2
@@ -230,16 +231,25 @@ const styles = {
        padding: 0
      },
      containerMessage: {
-        flexDirection: 'column',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
         margin: 10,
-        padding: 2
+        marginLeft: 1,
+        padding: 4
       },
       textMessage: {
         color: 'lightslategray',
         fontSize: 18,
        },
       headerMessage: {
-       color: 'darkslategrey',
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: 'darkslategrey',
+      },
+      messageIcon: {
+        padding: 4,
+        margin: 2,
       },
 };
 
@@ -248,13 +258,14 @@ const message = (textHeader, textMessage, msgIcon, clrIcon) => (
       <View>
         <Icon
           name={msgIcon}
-          size={50}
+          size={40}
           type='ionicon'
           color={clrIcon}
+          iconStyle={styles.messageIcon}
         />
       </View>
       <View>
-        <Text h4 style={styles.headerMessage}> {textHeader} </Text>
+        <Text style={styles.headerMessage}> {textHeader} </Text>
         <Text style={styles.textMessage}> {textMessage} </Text>
       </View>
     </View>

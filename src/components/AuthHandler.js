@@ -193,7 +193,7 @@ class AuthHandler extends Component {
 
   render() {
     return (
-      <View>
+      <View style={{ padding: 0, marginLeft: 5 }}>
         {this.props.children}
       </View>
     );
