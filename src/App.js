@@ -18,6 +18,7 @@ class App extends Component {
       global.crt = ''; //Current refresh token
       global.refToWebView = 'null';
       global.dbVerAKB = ''; //The actual (last) databse version of AKB-GIS
+      global.activeExpedition = -1;//ID of the active expedition
       this.state = { appState: '',
                       connectionState: '',
                       authState: '' };

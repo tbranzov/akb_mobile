@@ -21,18 +21,8 @@ componentDidMount() {
 
   //this.regionCoordsDefinition();
 
-  this.willFocusSubscription();
-}
-
-componentWillUnMount() {
-  this.willFocusSubscription.remove();
-}
-
-willFocusSubscription = () => {
-    this.props.navigation.addListener(
-    'willFocus',
-    () => { this.readAllExpeditions(); }
-  );
+  this.willFocusSubscription =
+      this.props.navigation.addListener('willFocus', this.willFocusHandler);
 }
 
 onPressListItem = ({ item }) => {
@@ -42,6 +32,12 @@ onPressListItem = ({ item }) => {
       objExpedition: item,
   });
 }
+
+componentWillUnMount() {
+  this.willFocusSubscription.remove();
+}
+
+willFocusHandler = () => this.readAllExpeditions();
 
 readAllExpeditions() {
   //console.log('read all expeditions');
@@ -58,6 +54,17 @@ readAllExpeditions() {
   });
 }
 
+deleteData(id) {
+    console.log('delete current index:', id);
+    const allExpeditions = realm.objects('Expedition');
+    const currExpedition = allExpeditions.filtered(`id=${id}`)[0];
+    realm.write(() => {
+      realm.delete(currExpedition); // Delete current expedition from database
+    this.readAllExpeditions();
+  }
+  );
+}
+
 renderDeleteAlert(expeditionID) {
   Alert.alert(
     'Внимание!',
@@ -70,22 +77,11 @@ renderDeleteAlert(expeditionID) {
   );
 }
 
-deleteData(id) {
-    console.log('delete current index:', id);
-    const allExpeditions = realm.objects('Expedition');
-    const currExpedition = allExpeditions.filtered(`id=${id}`)[0];
-    realm.write(() => {
-      realm.delete(currExpedition); // Delete current expedition from database
-    this.readAllExpeditions();
-  }
-  );
-}
-
 renderNewExpedition() {
   return (
     <TouchableOpacity
       onPress={() => {
-       this.props.navigation.navigate('Details', {
+       this.props.navigation.navigate('NewExpedition', {
           titleExpedition: 'Ново издирване',
       });
     }}

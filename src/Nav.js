@@ -5,12 +5,18 @@ import { createStackNavigator,
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { HomeScreen,
           SettingsScreen,
-          CommunicationScreen,
-          ExpeditionList, ExpeditionDetails, ScreenSplash, ScreenLogin } from './screens';
+          CurrentExpedition, NewExpeditionScreen,
+          ExpeditionList, ExpeditionDetailsScreen, ScreenSplash, ScreenLogin } from './screens';
 
 const stackExpeditions = createStackNavigator({
   Expeditions: ExpeditionList,
-  Details: ExpeditionDetails,
+  Details: ExpeditionDetailsScreen,
+  NewExpedition: NewExpeditionScreen,
+});
+
+const stackSingleExpedition = createStackNavigator({
+  Expedition: CurrentExpedition,
+  NewExpedition: NewExpeditionScreen,
 });
 
 const stackAuth = createStackNavigator({
@@ -28,16 +34,16 @@ const stackTab = createBottomTabNavigator(
         tabBarLabel: 'Карта'
         }
        },
-      Expeditions: { screen: stackExpeditions,
+      SingleExpedition: { screen: stackSingleExpedition,
                 navigationOptions: {
-          tabBarLabel: 'Данни'
+          tabBarLabel: 'Издирване'
           }
          },
-      Communication: { screen: CommunicationScreen,
-                navigationOptions: {
-          tabBarLabel: 'Комуникация'
-          }
-         },
+       Expeditions: { screen: stackExpeditions,
+                 navigationOptions: {
+           tabBarLabel: 'Архив'
+           }
+          },
       Settings: { screen: SettingsScreen,
                 navigationOptions: {
           tabBarLabel: 'Настройки'
@@ -55,8 +61,8 @@ const stackTab = createBottomTabNavigator(
            iconName = `ios-options${focused ? '' : '-outline'}`;
          } else if (routeName === 'Expeditions') {
            iconName = `ios-folder${focused ? '' : '-outline'}`;
-         } else if (routeName === 'Communication') {
-           iconName = `ios-cloud-upload${focused ? '' : '-outline'}`;
+         } else if (routeName === 'SingleExpedition') {
+           iconName = `ios-bookmarks${focused ? '' : '-outline'}`;
          }
          return <Ionicons name={iconName} size={25} color={tintColor} />;
        },

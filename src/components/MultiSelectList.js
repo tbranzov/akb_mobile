@@ -27,7 +27,8 @@ class MultiSelectList extends PureComponent {
   render() {
     return (
       <FlatList
-        horizontal
+        horizontal={false}
+        numColumns='3'
         data={this.props.data}
         extraData={this.state}
         keyExtractor={(item, index) => `list-item-${index}`}

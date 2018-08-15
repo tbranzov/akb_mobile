@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableHighlight, Alert } from 'react-native';
 import Modal from 'react-native-modal';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Card, Button } from 'react-native-elements';
@@ -22,7 +22,7 @@ import { serverIPaddr,
 // this.props.navigation.getParam(titleExpedition) -  името на издирването
 
 
-class ExpeditionDetails extends Component {
+class NewExpeditionScreen extends Component {
   // Текстът-заглавие в навигационната лента (горе на екрана)
   static navigationOptions = ({ navigation }) => ({
       title: navigation.getParam('titleExpedition', 'Ново издирване'),
@@ -38,6 +38,7 @@ class ExpeditionDetails extends Component {
                expeditionID: '',
                tracks: [],
                regionSelected: false,
+               featuresLoaded: false,
                dataModeText: '',
                dbSinchronizationText: '',
                regionCoordsStateText: '',
@@ -107,17 +108,11 @@ componentDidMount() {
   // макетна структура за тест на тракове и точки
   // да се изтрие при внедряване върху устройство
 
-  if (titleExpedition === 'Ново издирване') {
-    //expeditionID: NewExpeditionID() // взема следващ идентификатор за запис в базата
-    this.setState({ expeditionID: NewExpeditionID(),
-                    recordMode: 1,
-                    expeditionTitle: 'Ново издирване'
-     });
-  } else {
-    const expedition = this.props.navigation.getParam('objExpedition');
-    //Поема обект от типа Expedition, подаден за редакция на запис в базата
-    this.dataCheck(expedition);
-  }
+  //expeditionID: NewExpeditionID() // взема следващ идентификатор за запис в базата
+  this.setState({ expeditionID: NewExpeditionID(),
+                  recordMode: 1,
+                  expeditionTitle: 'Ново издирване'
+   });
 
   messagesChannel.on('json', this.messageWebHandler);
 }
@@ -156,21 +151,6 @@ setNewDatamode() {
         Alert.alert('Internet connection problem',
         'You have to login first, in order to create a new expedition.\nPlease, restore the internet connection and try again.');
     }
-}
-
-setDataFieldsState(newState) {
-  /*  if (newState === true) {
-        this.setState({
-            inputFieldBackgroundColor: 'white',
-            placeholderForegroundColor: placeholderForeClr,
-        });
-    } else {
-        this.setState({
-            inputFieldBackgroundColor: disabledFieldBackClr,
-            placeholderForegroundColor: disabledFieldBackClr,
-        });
-    }
-  */
 }
 
 sinchronizeWithAKBdb = async (ver) => {
@@ -766,6 +746,31 @@ emitTransferExpeditionData = (obj) => {
    }
 }
 
+makeActiveExpedition() {
+      const dataObj = {};
+      dataObj.expeditionId = this.state.expeditionID;
+      dataObj.expeditionName = this.state.expeditionTitle;
+      dataObj.regionCoords = JSON.parse(this.areaParameters.areaCoordinates.slice());
+      dataObj.regionZoom = this.areaParameters.zoom;
+      dataObj.regionFeatures = this.features;
+      const responseJSON = {
+          exitState: 'select',
+          obj: dataObj,
+      };
+      this.selectedExpedition(responseJSON);
+      //функцията за прехвърляне на експедиция на картата(HomeScreen)
+      global.activeExpedition = dataObj.expeditionId;
+      // Указва избраната експедиция като активна
+  }
+
+loadActiveFeaturesHandler() {
+    if (isEmpty(this.areaParameters.areaCoordinates)) {
+        Alert.alert('Warning', 'You must set region coordinates first!');
+    } else {
+        this.setNewDatamode();
+    }
+}
+
 toggleModalwithDataCheck(expRec) {
     if (expRec) { // ако е подаден аргумент прави проверка на полето данни и ререндва
         this.dataCheck(expRec);
@@ -799,114 +804,71 @@ renderModalEditExpedition() {
 renderCardRegionSelect() {
     const { regionSelected } = this.state;
     return (
-      <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
+      <Card flexDirection='row' wrapperStyle={styles.containerCard}>
           <View style={thumbnailContainerStyle} >
-            <Icon
-              name={'ios-bookmark'}
-              md={'md-bookmark'}
-              size={50}
-              color={'navy'}
-            />
+              <Text style={{ fontSize: 50 }}>1.</Text>
           </View>
-          <View style={headerContentStyle} >
-            <Text style={headerTextStyle}>Избери регион</Text>
-            <Text>{ `Избран регион: ${regionSelected ? 'Успешно избран' : 'Неизбран'}`}</Text>
-          </View>
-          <TouchableOpacity onPress={() => this.props.navigation.navigate('Home')}>
-            <Icon
-              name={'ios-more'}
-              md={'md-more'}
-              size={50}
-              color={'tomato'}
-            />
-          </TouchableOpacity>
+          <Button
+            raised
+             backgroundColor='steelblue'
+            containerViewStyle={{ width: '80%' }}
+             buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
+             onPress={() => this.props.navigation.navigate('Home')}
+             title={regionSelected ? 'Регион - избран!' : 'Избери регион на издирването'}
+          />
       </Card>
     );
   }
 
-// Рендва карта за зареждане на фичърите от региона
-renderCardLoadRegionFeatures() {
-    const { expeditionTitle, startDate, leaderName } = this.state;
-    return (
-      <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
-        <Button
-          small
-          rightIcon={{ name: 'code' }}
-          title='Зареди фичъри'
-          onPress={() => {
-                  if (isEmpty(this.areaParameters.areaCoordinates)) {
-                      Alert.alert('Warning', 'You must set region coordinates first!');
-                  } else {
-                      this.setNewDatamode();
-                  }
-              }}
-        />
-        <Button
-          small
-          rightIcon={{ name: 'code' }}
-          title='Прехвърли експедицията'
-          onPress={() => {
-                const dataObj = {};
-                dataObj.expeditionId = this.state.expeditionID;
-                dataObj.expeditionName = this.state.expeditionTitle;
-                dataObj.regionCoords = this.areaParameters.areaCoordinates.slice();
-                dataObj.regionZoom = this.areaParameters.zoom;
-                dataObj.regionFeatures = this.features;
-                const responseJSON = {
-                    exitState: 'select',
-                    obj: dataObj,
-                };
-                this.selectedExpedition(responseJSON);
-                //функцията за прехвърляне на експедиция на картата(HomeScreen)
-              }}
-        />
-      </Card>
-    );
-  }
 
-// Рендва карта за вход във формата за редактиране на данните за издиравне
-renderCardEditExpedition() {
-    const { expeditionTitle, startDate, leaderName } = this.state;
-    return (
-      <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
-          <View style={thumbnailContainerStyle} >
-            <Icon
-              name={'ios-bookmark'}
-              md={'md-bookmark'}
-              size={50}
-              color={'navy'}
-            />
-          </View>
-          <View style={headerContentStyle} >
-            <Text style={headerTextStyle}>Въведи описателни данни</Text>
-            <Text>{ `Начало: ${startDate}`}</Text>
-            <Text>{ `Ръководител: ${leaderName}`}</Text>
-          </View>
-          <TouchableOpacity onPress={this.toggleModal}>
-            <Icon
-              name={'ios-more'}
-              md={'md-more'}
-              size={50}
-              color={'tomato'}
-            />
-          </TouchableOpacity>
-      </Card>
-    );
-  }
-
-renderTracks() {
-    if (this.state.tracks) {
+  // Рендва карта за избор на регион на експедицията
+  renderCardLoadFeatures() {
+      const { featuresLoaded } = this.state;
       return (
-        <Card
-          titleStyle={{ paddingTop: 12 }}
-          dividerStyle={{ marginBottom: 2, marginLeft: 10, marginRight: 10 }}
-          containerStyle={{ padding: 0, margin: 0, marginTop: 15 }}
-          title='Записани тракове: '
-        >
-          <MultiSelectList data={this.state.tracks} />
+        <Card flexDirection='row' wrapperStyle={styles.containerCard}>
+            <View style={thumbnailContainerStyle} >
+                <Text style={{ fontSize: 50 }}>2.</Text>
+            </View>
+            <Button
+              raised
+               backgroundColor='steelblue'
+              containerViewStyle={{ width: '80%' }}
+               buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
+               onPress={this.loadActiveFeaturesHandler.bind(this)}
+               title={featuresLoaded ? 'Детайлите са заредени!' : 'Зареди детайли от АКБ-ГИС'}
+            />
         </Card>
       );
     }
+
+// Рендва карта с инструментални бутони
+renderCardTools() {
+    return (
+      <Card flexDirection='row' wrapperStyle={{ justifyContent: 'center' }}>
+        {iconBox('Направи активна', 'ios-bookmarks', 'steelblue', this.makeActiveExpedition.bind(this))}
+        {iconBox('Откажи', 'ios-close', 'steelblue')}
+      </Card>
+    );
+}
+
+// Рендва карта за вход във формата за редактиране на данните за издиравне
+renderCardEditExpedition() {
+    const { expeditionTitle } = this.state;
+    return (
+      <Card flexDirection='row' wrapperStyle={styles.containerCard}>
+          <View style={thumbnailContainerStyle} >
+              <Text style={{ fontSize: 50 }}>3.</Text>
+          </View>
+          <Button
+            raised
+            backgroundColor='steelblue'
+            containerViewStyle={{ width: '80%' }}
+            buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
+            onPress={this.toggleModal}
+            title={'Въведи описателни данни за издирването'}
+          />
+      </Card>
+    );
   }
 
 render() {
@@ -916,19 +878,16 @@ render() {
             {this.renderCardRegionSelect()}
           </View>
           <View>
-            {this.renderCardLoadRegionFeatures()}
+            {this.renderCardLoadFeatures()}
           </View>
           <View>
             {this.renderCardEditExpedition()}
           </View>
           <View>
-            {this.renderTracks()}
+            {this.renderCardTools()}
           </View>
           <View>
-            <Modal
-            isVisible={this.state.isModalVisible}
-            onModalHide={() => this.renderTracks()}
-            >
+            <Modal isVisible={this.state.isModalVisible} >
               {this.renderModalEditExpedition()}
             </Modal>
           </View>
@@ -938,6 +897,44 @@ render() {
 }
 
 const styles = {
+  container: {
+     flex: 1,
+     flexDirection: 'column',
+     alignItems: 'center',
+     justifyContent: 'center',
+     backgroundColor: 'white',
+     margin: 0,
+     padding: 0
+   },
+   containerButton: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  headerMessage: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'darkslategrey',
+  },
+  containerIconBox: {
+     flexDirection: 'column',
+     alignItems: 'center',
+     justifyContent: 'center',
+     margin: 4,
+     padding: 4
+   },
+   containerCard: {
+     width: '90%',
+     justifyContent: 'flex-start',
+     alignItems: 'center'
+   },
+   messageIcon: {
+     padding: 4,
+     margin: 2,
+   },
+   iconLabel: {
+     fontSize: 10,
+     color: 'darkslategrey',
+   },
   headerContentStyle: {
     flexDirection: 'column',
     justifyContent: 'space-around'
@@ -975,6 +972,7 @@ const styles = {
     width: null
   },
   thumbnailContainerStyle: {
+    width: '15%',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
@@ -1008,4 +1006,22 @@ const syncYES = 1;
 const syncNOtext = 'Not sinchronized';
 const syncYEStext = 'Sinchronized';
 
-export { ExpeditionDetails };
+const iconBox = (textLabel, msgIcon, clrIcon, onPressHandler) => (
+    <View style={styles.containerIconBox}>
+      <View>
+        <Icon
+          name={msgIcon}
+          size={40}
+          type='ionicon'
+          color={clrIcon}
+          iconStyle={styles.messageIcon}
+          onPress={onPressHandler}
+        />
+      </View>
+      <View>
+        <Text style={styles.iconLabel}> {textLabel} </Text>
+      </View>
+    </View>
+  );
+
+export { NewExpeditionScreen };
