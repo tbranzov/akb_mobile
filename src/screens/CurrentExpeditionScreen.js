@@ -5,15 +5,16 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { Card, Button } from 'react-native-elements';
 import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
+import CheckpointScreen from '../components/checkpoint';
+import Menu from '../components/menu';
 // функция, която връща следващ идентификатор за запис в базата
-import { realm, NewExpeditionID } from '../components/RealmSchema';
+import { realm } from '../components/RealmSchema';
 // функция, която връща форматирана за изобразяване дата
-import { getFormattedDate, isEmpty } from '../components/utilities';
+import { getFormattedDate, isEmpty, getPointTypes } from '../components/utilities';
 import { serverIPaddr,
           typesEndpoint,
           tagsEndpoint,
           featuresEndpoint } from '../components/constants';
-
 
 // props, които се подават на компонента през react-navigation:
 // this.props.navigation.getParam(expeditionID) - ID на издирването в базата
@@ -44,7 +45,11 @@ class CurrentExpedition extends Component {
                regionCoordsStateColor: '',
                featuresStateText: '',
                featuresStateColor: '',
-               isModalVisible: false
+               isModalVisible: false,
+               menuVisible: false,
+               modalCheckpointVisible: false,
+               GPScoordinates: [], // Координати на точка
+               GPSaccuracy: 0, // Точност на GPS
      };
 
      this.areaParameters = {
@@ -65,8 +70,19 @@ class CurrentExpedition extends Component {
      this.features = ''; //Container for stringified JSON-features inside the selected region
      this.dataMode = dmUndefined;
      this.setNewDatamode = this.setNewDatamode.bind(this);
+     this.editPoint = this.editPoint.bind(this);
      this.regionCoordsChanged = false; //true <- if features are manually reloaded by the user
      this.featuresChanged = false; //true <- if features are manually loaded by the user
+     this.checkpointId = -1; //ID of selected checkpoint
+     this.menuTitle = '';
+     // Заглавието на менютата за редактиране и въвеждане на данни за точки и тракове
+     this.menuItems = [];
+     // Масива с елементите на менютата
+     this.checkpointType = -1;
+      // Тип на точката
+     this.checkpointTitle = '';
+     //
+     this.MenuSelectedItem = false;
   }
 
 componentDidMount() {
@@ -157,6 +173,7 @@ setNewDatamode() {
 willFocusHandler = () => {
   if (global.activeExpedition !== -1) { this.dataCheck(global.activeExpedition); }
 }
+
 
 sinchronizeWithAKBdb = async (ver) => {
         console.log('Loading AKB database ...');
@@ -473,8 +490,107 @@ loadFeatures = (regionCoords) => {
     });
 }
 
+openPointForm(geolocation, datamode) {
+    console.log('Open point data screen ...');
+
+    this.setState({
+        GPScoordinates: geolocation.coordinates,
+        GPSaccuracy: geolocation.accuracy,
+        checkPointDataMode: datamode,
+        // Да се въведе съобщение за потребителите, когато данните бъдат записани
+        //selectedNotes: [],
+        //checkpointPhotos: [],
+    });
+
+    Alert.alert(
+        'Select',
+        'Point operation',
+        [
+            { text: 'Move', onPress: () => { } },
+            { text: 'Edit',
+              onPress: () => {
+                Alert.alert(
+                    'Select',
+                    'Modal panel type for point data',
+                    [
+                        {
+                          text: 'Old',
+                          onPress: () => this.setState({ modalPointControlVisible: true })
+                        },
+                        {
+                        text: 'New',
+                        onPress: () => {
+                            if (datamode === 'new') {
+                                this.processMenuItem = this.editPoint;
+                                this.menuTitle = 'Create point of type';
+                                this.menuItems = getPointTypes(realm);
+                                this.setState({ menuVisible: true });
+                            } else {
+                                this.checkpointType = -1; //Read the type from DB
+                                this.setState({ modalCheckpointVisible: true });
+                            }
+                        } },
+                        { text: 'Cancel', onPress: () => { }, style: 'cancel' },
+                    ],
+                    { cancelable: false }
+                );
+            } },
+            { text: 'Cancel', onPress: () => { }, style: 'cancel' },
+        ],
+        { cancelable: false }
+    );
+ }
+
+pointControlAt(geolocation, datamode) {
+  if (geolocation.accuracy > 25) {
+    Alert.alert(
+      'Warning',
+      'Bad accuracy.\nProceed on your own responsibility ?',
+      [
+          { text: 'Cancel', onPress: () => { }, style: 'cancel' },
+          { text: 'OK', onPress: () => this.openPointForm(geolocation, datamode) },
+      ],
+      { cancelable: false }
+    );
+  } else {
+      this.openPointForm(geolocation, datamode);
+  }
+}
+
+processMenuItem = (index) => {}
+
+editPoint(index) {
+  this.setState({ menuVisible: false });
+  this.MenuSelectedItem = false;
+
+  if (index >= 0) {
+      this.checkpointType = this.menuItems[index].id;
+      this.checkpointTitle = this.menuItems[index].label;
+      this.MenuSelectedItem = true;
+  }
+}
+
 messageWebHandler = (jsonObject) => {
     switch (jsonObject.command) {
+      case 'execute':
+          if (jsonObject.payload.functionName === 'pointControl') {
+              this.checkpointId = jsonObject.payload.checkpointId;
+              this.pointControlAt(jsonObject.payload.geolocation, jsonObject.payload.datamode);
+          }
+          /*
+                  if (jsonObject.payload.functionName === 'saveGeolocation') {
+                      this.saveGeolocation(this.state.trackName, jsonObject.payload.geolocation);
+                  }
+                  if (jsonObject.payload.functionName === 'featureInfo') {
+                      if (jsonObject.payload.featureId !== undefined) {
+                          this.showFeature(jsonObject.payload.featureId);
+                      }
+                  }
+                  if (jsonObject.payload.functionName === 'featureMenu') {
+                      this.showMenu(jsonObject.payload.features);
+                  }
+            */
+          break;
         default: // 'save-area-coordinates':
             this.areaParameters.areaCoordinates = jsonObject.payload.areaCoords;
             this.areaParameters.zoom = jsonObject.payload.zoom;
@@ -590,7 +706,7 @@ tagsLoaded = async () => {
 selectedExpedition = (data) => {
     console.log('Close expeditions screen ...');
     if (data.exitState === 'select') {
-        //this.setState({ activeExpeditionId: data.obj.expeditionId });
+        //this.setState({ expeditionID: data.obj.expeditionId });
         this.readExpeditionTracks(data.obj.expeditionId)
         .then((tracks) => {
             //On the map all points from all tracks are in one layer,
@@ -692,13 +808,38 @@ selectedExpedition = (data) => {
     } else { //data.exitState == 'close'
         const expeditions = realm.objects('Expedition');
         const expedition = expeditions.filtered(
-          `id=${this.state.activeExpeditionId.toString()}`)[0];
+          `id=${this.state.expeditionID.toString()}`)[0];
         //if active expedition was deleted
         if (expedition === undefined) {
             this.setState({ expeditionID: 0 });
             global.refToWebView.emit('clear-expedition', { payload: {} });
         }
     }
+ }
+
+ selectedCheckpoint = (data) => {
+     console.log('Close checkpoint data screen ...');
+     this.setState({ modalCheckpointVisible: false });
+
+     if (data.exitState === 'remove') {
+         this.emitRemoveCheckpoint(data.obj.coordinates, data.obj.remove);
+     } else { //data.exitState == 'exit'
+         this.emitCreateCheckpoint(
+             this.state.GPScoordinates,
+             this.state.GPSaccuracy,
+             data.obj.createCheckpointMark
+         );
+     }
+  }
+
+emitCreateCheckpoint = (coordinates, accuracy, create) => {
+    const checkpointData = { coordinates, accuracy, create };
+    global.refToWebView.emit('createCheckpoint', { checkpoint: checkpointData });
+ }
+
+ emitRemoveCheckpoint = (coordinates, remove) => {
+    const checkpointData = { coordinates, remove };
+    global.refToWebView.emit('removeCheckpoint', { checkpoint: checkpointData });
  }
 
  readExpeditionTracks = (expeditionId) => {
@@ -900,11 +1041,47 @@ renderSelectedExpedition() {
         </View>
         <View>
           <Modal
-          isVisible={this.state.isModalVisible}
-          onModalHide={() => this.renderTracks()}
+            isVisible={this.state.isModalVisible}
+            onModalHide={() => this.renderTracks()}
           >
             {this.renderModalEditExpedition()}
           </Modal>
+          { /* Modal panel menu */ }
+          <Modal
+              isVisible={this.state.menuVisible}
+              onShow={() => {}}
+              onModalHide={() => {
+                    if (this.MenuSelectedItem) {
+                    this.setState({ modalCheckpointVisible: true });
+                  }
+                }
+              }
+          >
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} >
+                  <Menu
+                    title={this.menuTitle}
+                    menuItems={this.menuItems}
+                    onSelectMenuItem={this.processMenuItem}
+                  />
+              </View>
+          </Modal>
+          { /* Modal panel for check point data */ }
+          <Modal
+              isVisible={this.state.modalCheckpointVisible}
+              onModalHide={() => {}}
+          >
+              <CheckpointScreen
+                  realm={realm}
+                  expeditionId={this.state.expeditionID}
+                  checkpointType={this.checkpointType}
+                  checkpointTitle={this.checkpointTitle}
+                  checkpointInd={this.checkpointId}
+                  coordinatesGPS={this.state.GPScoordinates}
+                  accuracyGPS={this.state.GPSaccuracy}
+                  selectedCheckpoint={this.selectedCheckpoint}
+              />
+          </Modal>
+
         </View>
       </View>
   );

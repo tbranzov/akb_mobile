@@ -113,14 +113,10 @@ componentDidMount() {
   this.willFocusSubscription =
       this.props.navigation.addListener('willFocus', this.willFocusHandler);
   //лисънър при добиване на фокус, напр. при превключване от таб в таб
-
-  messagesChannel.on('json', this.messageWebHandler);
 }
 
 componentWillUnmount() {
   const { messagesChannel } = global.refToWebView;
-  // messageChannel - изтрива се с метода removeListener (а не removeEventListener)
-  messagesChannel.removeListener('json', this.messageWebHandler);
   this.willFocusSubscription.remove();
 }
 
@@ -471,18 +467,6 @@ loadFeatures = (regionCoords) => {
 
         console.log('end');
     });
-}
-
-messageWebHandler = (jsonObject) => {
-    switch (jsonObject.command) {
-        default: // 'save-area-coordinates':
-            this.areaParameters.areaCoordinates = jsonObject.payload.areaCoords;
-            this.areaParameters.zoom = jsonObject.payload.zoom;
-            console.log('area polygon point count: ', this.areaParameters.areaCoordinates.length);
-            this.setState({ regionSelected: true });
-            this.regionCoordsChanged = true;
-            break;
-      }
 }
 
 regionCoordsDefinition = (regionCoords) => {

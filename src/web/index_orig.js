@@ -9,7 +9,6 @@ fontAwesome.load().then(function(font){
 */
 
 const minAccuracy = 25;
-const hitTOLERANCE = 1;
 const tilesZIndex = 0;
 const positionZIndex = 2;
 const areapoligonZIndex = 3;
@@ -218,7 +217,7 @@ img1.src = 'marker1.png';
 var clearExpedition = function() {
 	//This operator has to be first
 	if (expeditionAvailable && chbViewCornerCoordinates.checked) {
-		chbViewCornerCoordinates.click(); 
+		chbViewCornerCoordinates.click();
 	};
 
 	messagesContainer.innerHTML = 'No expedition selected';
@@ -443,7 +442,7 @@ function waitForProperGeolocation() {
 			waitForProperGeolocation();
 		}
 	}, 2000);
-} 
+}
 
 var openCheckPointForm = function (coordinates, accuracy) {
 	var datamode = 'new';
@@ -460,7 +459,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 		var x, y, distance = 0.0;
 		var minDistance = 100000.0;
 		var minTrackLocationIndex;
-		
+
 		/* OpenLayers example: Get Coordinates of drawn features
 		// Get the array of features
 		var features = vector.getSource().getFeatures(); // In this case the vector is trackpointsLayer itself
@@ -469,7 +468,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 			alert(feature.getGeometry().getCoordinates());
 		});
 		*/
-		
+
 		for ( i = 0; i < trackPoints.length; i++ ) {
 			// Calculate the distance from current GPS-location to the nearest track-location.
 			trackPointCoordinates = trackPoints[i].getGeometry().getCoordinates();
@@ -486,7 +485,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 		//Get the coordinates of the nearest track-point as current data
 		coordinates = trackPoints[minTrackLocationIndex].getGeometry().getCoordinates();
 		accuracy = trackPointsAccuracy[minTrackLocationIndex];
-	} 
+	}
 
 	//Check for existing check-point coinsiding with the current
 	// 1. track-point (if checkbox chbNearestTrackPoint is checked) or
@@ -514,7 +513,7 @@ var openCheckPointForm = function (coordinates, accuracy) {
 			checkpointId: checkpointId,
 		},
 	});
-}	
+}
 
 /*
 helloBtn.addEventListener('click', () => {
@@ -598,7 +597,7 @@ var styleFunction = function(feature) {
 };
 
 var processExpeditionData = function(expedition) {
-	//alert(JSON.stringify(expedition));
+	alert(JSON.stringify(expedition));
 	if (expedition.payload.expeditionId == 0) {
 		//chbViewCornerCoordinates.disabled = false;
 	} else {
@@ -644,7 +643,7 @@ var processExpeditionData = function(expedition) {
 			for (var i=0; i<len; i++) {
 				trPoints = expedition.payload.tracks[i];
 				for (var j=0; j<trPoints.length; j++) {
-					pFeature = new ol.Feature({ 
+					pFeature = new ol.Feature({
 						geometry: new ol.geom.Point([trPoints[j][0], trPoints[j][1]])
 					});
 					pFeature.setStyle(expeditiondataStyle);
@@ -661,7 +660,7 @@ var processExpeditionData = function(expedition) {
 		chbViewCheckpoints.checked = true;
 		removeLayer(checkpointsLayer);
 		checkPoints = [];
-		
+
 		var point_feature, coords;
 		const silent = true;
 		for (var i=0; i<expedition.payload.checkpoints.length; i++){
@@ -674,7 +673,7 @@ var processExpeditionData = function(expedition) {
 			point_feature.setProperties({editable: true}, silent);
 			checkPoints.push(point_feature);
 		};
-		
+
 		checkpointsLayer = new ol.layer.Vector({name: 'ExpeditionCheckpoints',});
 		var source = new ol.source.Vector({ features: checkPoints });
 		checkpointsLayer.setSource(source);
@@ -821,16 +820,16 @@ RNMessageChannel.on('transferTrackData', track => {
 	};
 
 	trackGeolocationData = track.payload.geoLocations;
-	
+
 	trackAvailable = !track.payload.emptyTrack;
 
 	removeLayer(trackpointsLayer);
 	trackPoints = [];
 	trackPointsAccuracy = [];
 	createTrackpointsLayer();
-	
+
 	var geolocationsCount =  Object.keys(trackGeolocationData).length;
-	
+
 	/*	Show coordinates - for test purposes only
 	var text = "Geolocations <br>";
 	for (i = 0; i < geolocationsCount; i++) {
@@ -841,12 +840,12 @@ RNMessageChannel.on('transferTrackData', track => {
 	};
 	messagesContainer.innerHTML = text;
 	*/
-	
+
 	if (geolocationsCount > 0) {
 		addPointToTrack(firstPointStyle, [trackGeolocationData[0].coordinates[0], trackGeolocationData[0].coordinates[1]]);
 		trackPointsAccuracy[0] = trackGeolocationData[0].accuracy;
 	}
-	
+
 	for (i = 1; i < geolocationsCount; i++) {
 		addPointToTrack(trackPointStyle, [trackGeolocationData[i].coordinates[0], trackGeolocationData[i].coordinates[1]]);
 		trackPointsAccuracy[i] = trackGeolocationData[i].accuracy;
@@ -855,7 +854,7 @@ RNMessageChannel.on('transferTrackData', track => {
 	var s = new ol.source.Vector({ features: trackPoints });
 	trackpointsLayer.setSource(s);
 	addPointLayer(trackpointsLayer);
-	
+
 	view.setZoom(regionZoom);
 
 	if (geolocationsCount > 0) {
@@ -863,9 +862,9 @@ RNMessageChannel.on('transferTrackData', track => {
 			//Center the view at the first point of the track
 			view.setCenter([trackGeolocationData[0].coordinates[0], trackGeolocationData[0].coordinates[1]]);
 		};
-		
+
 		chbNearestTrackPoint.disabled = false;
-	} else { 
+	} else {
 		chbNearestTrackPoint.disabled = true;
 	}
 });
@@ -1142,7 +1141,7 @@ chbPositioning.addEventListener('change', function() {
 			}
 		);
 	}
-	
+
 	geolocation.setTracking(this.checked);
 });
 
@@ -1154,7 +1153,7 @@ chbSaveTrack.addEventListener('change', function() {
 		}
 		return;
 	}
-	
+
 	if (!chbPositioning.checked) {
 		if (this.checked) {
 			this.checked = false;
@@ -1186,19 +1185,17 @@ chbZoomTreshold.addEventListener('change', function() {
 
 var isOnclickOverlayVisible = false;
 var isOnclickOverlayReady = true;
-
 function allowOnclickOverlay() {
     isOnclickOverlayReady = true;
 };
 
 var onClickOverlayCoordinates;
 var clickEvent = null;
-
 onClickOverlay.ondblclick = function (evt) {
 	if (isOnclickOverlayVisible) {
 		clickEvent = null;
 		alert('This is "dblclick" event.');
-	};	
+	};
 };
 
 onClickOverlay.onclick = function(evt) {
@@ -1207,10 +1204,11 @@ onClickOverlay.onclick = function(evt) {
 };
 
 var click_action = function () {
-    if (clickEvent == null)	return;
-
+    if(clickEvent == null){
+		return;
+	};
     var evt = clickEvent;
-	
+
 	if (expeditionAvailable && isOnclickOverlayReady) {
 		RNMessageChannel.sendJSON({
 			command: 'execute',
@@ -1256,7 +1254,6 @@ onClickOverlay.addEventListener('touchstart', function(evt) {
 	};
 
 	function end(evt) {
-		var e = evt;
 		overlayDx = null;
 		window.removeEventListener('touchmove', move);
 		window.removeEventListener('touchend', end);
@@ -1264,13 +1261,6 @@ onClickOverlay.addEventListener('touchstart', function(evt) {
 		if (enabledTouchendEvent) {
 			//alert('This is "touchend" event.');
 			// Do something here ...
-			isOnclickOverlayReady = true;
-			processMapClick(); //Remove overlay, etc
-			isOnclickOverlayReady = true;
-			saveMapClickEvent.coordinate = onClickOverlayCoordinates;
-			saveMapClickEvent.pixel = map.getPixelFromCoordinate(onClickOverlayCoordinates);
-			//alert(Object.keys(saveMapClickEvent));
-			processMapClick(saveMapClickEvent);
 			enabledTouchendEvent = false;
 		}
 	};
@@ -1290,7 +1280,7 @@ chbViewPosCoordinates.addEventListener('click', function() {
 geolocation.on('change', function() {
 	positionChanged = true;
 	var accuracy = geolocation.getAccuracy();
-	  
+
 	accuracyElement.innerText = accuracy.toFixed(3) + ' [m]';
 	accuracy<=minAccuracy ? accuracyElement.style.color = 'black' : accuracyElement.style.color = 'red';
 	//RNMessageChannel.send(String(accuracy));
@@ -1314,7 +1304,7 @@ geolocation.on('change:accuracyGeometry', function() {
 });
 
 function addPointToTrack(style,coords) {
-	var trackPointFeature = new ol.Feature({ 
+	var trackPointFeature = new ol.Feature({
 		//geometry: new ol.geom.Point(ol.proj.transform(coords, 'EPSG:4326', 'EPSG:3857'))
 		geometry: new ol.geom.Point(coords)
 	});
@@ -1368,14 +1358,14 @@ geolocation.on('change:position', function() {
 		point_feature.setStyle(trackPointStyle);
 		trackpointsLayer.getSource().addFeature( point_feature );
 		// end
-		
+
 		//addPointToTrack(trackPointStyle,coordinates);
 		trackPoints.push(point_feature);
 		trackPointsAccuracy.push(accuracy);
-		
+
 		chbNearestTrackPoint.disabled = false;
 	}
-	
+
 	if (chbViewPosCoordinates.checked) {
 		// update the coord_overlay element's content
 		var element = coord_overlay.getElement();
@@ -1415,7 +1405,8 @@ function removeLayer(points){
 	map.removeLayer(points);
 }
 
-var processMapClick = function(event) {
+// register an event handler for the on-map-click event
+map.on('click', function(event) {
 	if (isOnclickOverlayReady) {
 		isOnclickOverlayReady = false;
 		if (isOnclickOverlayVisible) {
@@ -1448,7 +1439,7 @@ var processMapClick = function(event) {
 					line =  new ol.geom.LineString([trackPointCoordinates, coords]);
 					distance = line.getLength();
 					*/
-					//alert('coords=' + coords.toString() + '\nchpcoords=' + trackPointCoordinates.toString() + '\ndistance=' + distance.toString());  
+					//alert('coords=' + coords.toString() + '\nchpcoords=' + trackPointCoordinates.toString() + '\ndistance=' + distance.toString());
 
 					//Adjust minDist
 					if (distance < minDist) {
@@ -1508,7 +1499,7 @@ var processMapClick = function(event) {
 						layerName == 'ExpeditionTracks' || layerName == 'ExpeditionFeatures');
 			};
 
-			var features = map.getFeaturesAtPixel(event.pixel, {layerFilter, hitTolerance: hitTOLERANCE});
+			var features = map.getFeaturesAtPixel(event.pixel, {layerFilter, hitTolerance: 10});
 			/* Second method - the same result
 			var features = [];
 			map.forEachFeatureAtPixel(event.pixel, function(feature,null,null,layerFilter,this) {
@@ -1617,7 +1608,7 @@ var processMapClick = function(event) {
 				*/
 
 				// Variant 2 - no hierarchy, need menu creation
-				
+
 				if (fLen > 0) {
 					if (fLen == 1) {
 						RNMessageChannel.sendJSON({
@@ -1637,7 +1628,7 @@ var processMapClick = function(event) {
 						});
 					};
 				};
-				
+
 				// end of variant 2
 				//End of features' processing
 
@@ -1655,13 +1646,6 @@ var processMapClick = function(event) {
 		}
 		setTimeout(allowOnclickOverlay, 700); //Timeout needed to avoid second touch immediately after the first one
 	}
-};
-
-// register an event handler for the on-map-click event
-var saveMapClickEvent;
-map.on('click', function(event) {
-	saveMapClickEvent = event; //Save event structure for manual use later
-	processMapClick(event);
 });
 
 /*
