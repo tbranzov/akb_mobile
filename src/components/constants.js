@@ -1,4 +1,5 @@
-//import RNFetchBlob from 'react-native-fetch-blob'; // Production version
+import { Platform } from 'react-native';
+import RNFetchBlob from 'react-native-fetch-blob'; // Production version
 
 const serverIPaddr = 'http://93.152.172.53/';
 const refreshTokenEndpoint = `${serverIPaddr}token`;
@@ -7,11 +8,21 @@ const tagsEndpoint = `${serverIPaddr}tags/0`;
 const featuresEndpoint = `${serverIPaddr}features`;
 const loginURL = `${serverIPaddr}login`;
 
-//const dirs = RNFetchBlob.fs.dirs; // Production version
-//const MainHTML = { uri: `file:///${dirs.DocumentDir}/dist/index.html` }; // Production version
-
-const MainHTML = { uri: 'file:///Users/tbranzov/workspace/ReactNativeProjects/akb_wireframe/dist/index.html' };
+//const MainHTML = () => require('../../dist/index.html')
 // Да се оправи с react-native-fetch-blob - абсолютния път
+const filePathIndexHTML = require('../../dist/index.html');
+
+const getHTMLSource = () => {
+  const dirs = RNFetchBlob.fs.dirs;
+  if (Platform.OS === 'ios') {
+    //const filePath = { uri: `file://${dirs.DocumentDir}/dist/index.html}` };
+    return filePathIndexHTML;
+  }
+  const filePath = { uri: 'file:///android_asset/web/index.html' };
+  return filePath;
+};
+
+const MainHTML = getHTMLSource();
 
 //- Автентикационни константи
 const authStatusInProgress = 1;

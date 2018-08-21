@@ -21,9 +21,9 @@ class FormExpedition extends Component {
             leaderName: '',
             dateStart: '',
             numberOfDays: 1,
-            regionCoordinates: '',
-            regionFeatures: '',
-            zoom: 14,
+            //regionCoordinates: '',
+            //regionFeatures: '',
+            //zoom: 14,
             regionDescription: '',
             dataMode: '',
             dataChanged: false,
@@ -42,9 +42,9 @@ class FormExpedition extends Component {
                         dateStart: currExpedition.startDate,
                         numberOfDays: parseInt(currExpedition.days, 10),
                         regionDescription: currExpedition.regionDescription,
-                        regionCoordinates: currExpedition.regionCoordinates,
-                        regionFeatures: currExpedition.regionFeatures,
-                        zoom: currExpedition.regionZoom
+                        //regionCoordinates: currExpedition.regionCoordinates,
+                        //regionFeatures: currExpedition.regionFeatures,
+                        //zoom: currExpedition.regionZoom
                        });
       } catch (e) {
         console.log(e);
@@ -61,25 +61,23 @@ class FormExpedition extends Component {
 
     const { expeditionID,
             recordMode,
-            regionCoordinates,
-            regionFeatures,
-            regionZoom } = this.props;
+            //regionCoordinates,
+            //regionFeatures,
+            //regionZoom
+          } = this.props;
 
     const expeditionData = { expeditionID,
                             expeditionTitle,
                             leaderName,
                             dateStart,
                             numberOfDays,
-                            regionCoordinates,
-                            regionFeatures,
-                            regionZoom };
+                            //regionCoordinates,
+                            //regionFeatures,
+                            //regionZoom
+                          };
 
     this.setState({ error: '', loading: true });
     this.saveExpedition(expeditionData, recordMode);
-
-    //some code to put data in db
-    //this.onEditFail.bind(this);
-    //this.onEditSuccess.bind(this);
   }
 
   onChangeData() {
@@ -90,12 +88,12 @@ class FormExpedition extends Component {
     this.setState({ error: 'Record failed!', loading: false });
   }
 
-  onEditSuccess(expData) {
+  onEditSuccess(expID) {
     this.setState({
       loading: false,
       error: ''
     });
-    this.props.closeModal(expData);
+    this.props.closeModal(expID);
   }
 
   saveExpedition = (expeditionData, recordMode) =>
@@ -105,9 +103,9 @@ class FormExpedition extends Component {
                   leaderName,
                   dateStart,
                   numberOfDays,
-                  regionCoordinates,
-                  regionFeatures,
-                  regionZoom,
+                  //regionCoordinates,
+                  //regionFeatures,
+                  //regionZoom,
                   regionDescription } = expeditionData;
 
     if (recordMode === 1) { //  нов запис
@@ -115,9 +113,9 @@ class FormExpedition extends Component {
       const dbVersions = realm.objects('AKBdbVersions');
       expeditionRec.dbVersionIndexAKB = dbVersions.length - 1;
       //При нова експедиция винаги трябва да се ползва последната версия на базата
-      expeditionRec.regionCoordinates = JSON.stringify(regionCoordinates);
-      expeditionRec.regionZoom = regionZoom;
-      expeditionRec.regionFeatures = regionFeatures;
+      expeditionRec.regionCoordinates = '';// JSON.stringify(regionCoordinates);
+      expeditionRec.regionZoom = 14;//regionZoom;
+      expeditionRec.regionFeatures = '';//regionFeatures;
       expeditionRec.id = expeditionID;
       expeditionRec.userRole = 'member';
       expeditionRec.expeditionName = expeditionTitle;
@@ -134,14 +132,14 @@ class FormExpedition extends Component {
           realm.write(() => {
             realm.create('Expedition', expeditionRec);
           });
-          resolve(this.onEditSuccess(expeditionRec));
+          resolve(this.onEditSuccess(expeditionID));
             } catch (e) {
               reject(this.onEditFail());
         }
       } else { // редакция на съществуващ запис
         try {
           const currExpedition =
-          realm.objects('Expedition').filtered(`id=${expeditionID.toString()}`)[0];
+            realm.objects('Expedition').filtered(`id=${expeditionID.toString()}`)[0];
           realm.write(() => {
             currExpedition.expeditionName = expeditionTitle;
             currExpedition.leaderName = leaderName;
@@ -149,7 +147,7 @@ class FormExpedition extends Component {
             currExpedition.days = parseInt(numberOfDays, 10);
             currExpedition.regionDescription = regionDescription;
           });
-
+/*
           if (this.regionCoordsChanged === true) {
               currExpedition.regionCoordinates = JSON.stringify(regionCoordinates);
               currExpedition.regionZoom = regionZoom;
@@ -158,8 +156,8 @@ class FormExpedition extends Component {
           if (this.featuresChanged === true) {
               currExpedition.regionFeatures = regionFeatures;
           }
-
-          resolve(this.onEditSuccess(currExpedition));
+*/
+          resolve(this.onEditSuccess(expeditionID));
         } catch (e) {
           reject(e);
         }
@@ -233,10 +231,6 @@ class FormExpedition extends Component {
                 }}
                 onDateChange={dateStart => this.setState({ dateStart })}
               />
-            </Item>
-            <Item fixedLabel last>
-              <Label>{this.props.regionCoordinates}</Label>
-              <Label>{this.props.regionFeatures}</Label>
             </Item>
           </Form>
 

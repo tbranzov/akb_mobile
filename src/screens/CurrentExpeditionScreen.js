@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Modal from 'react-native-modal';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Card, Button } from 'react-native-elements';
+import { EventRegister } from 'react-native-event-listeners';
 import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
 import CheckpointScreen from '../components/checkpoint';
@@ -10,7 +11,7 @@ import Menu from '../components/menu';
 // функция, която връща следващ идентификатор за запис в базата
 import { realm } from '../components/RealmSchema';
 // функция, която връща форматирана за изобразяване дата
-import { getFormattedDate, isEmpty, getPointTypes } from '../components/utilities';
+import { getFormattedDate, getPointTypes } from '../components/utilities';
 import { serverIPaddr,
           typesEndpoint,
           tagsEndpoint,
@@ -35,7 +36,7 @@ class CurrentExpedition extends Component {
      this.state = { expeditionTitle: '',
                startDate: '',
                leaderName: '',
-               recordMode: '',
+               recordMode: 2,
                expeditionID: -1,
                tracks: [],
                regionSelected: false,
@@ -122,13 +123,12 @@ componentDidMount() {
   // макетна структура за тест на тракове и точки
   // да се изтрие при внедряване върху устройство
 
-  if (global.activeExpedition !== -1) {
-    this.dataCheck(global.activeExpedition);
-  }
-
   this.willFocusSubscription =
       this.props.navigation.addListener('willFocus', this.willFocusHandler);
   //лисънър при добиване на фокус, напр. при превключване от таб в таб
+
+  this.stateExpeditionChangedSubscription =
+    EventRegister.addEventListener('expeditionStateChanged', this.stateExpeditionChangedHandler);
 
   messagesChannel.on('json', this.messageWebHandler);
 }
@@ -138,6 +138,7 @@ componentWillUnmount() {
   // messageChannel - изтрива се с метода removeListener (а не removeEventListener)
   messagesChannel.removeListener('json', this.messageWebHandler);
   this.willFocusSubscription.remove();
+  EventRegister.removeEventListener(this.stateExpeditionChangedSubscription);
 }
 
 setNewDatamode() {
@@ -171,9 +172,116 @@ setNewDatamode() {
 }
 
 willFocusHandler = () => {
+  console.log(`From focushandler: ${global.activeExpedition} StateID: ${this.state.expeditionID}`);
   if (global.activeExpedition !== -1) { this.dataCheck(global.activeExpedition); }
 }
 
+stateExpeditionChangedHandler = (id) => {
+  console.log(`From ExpStateHandler: ${id} StateID: ${this.state.expeditionID}`);
+  this.refreshSelectedExpedition(id);
+}
+
+dataCheck(expedition) {
+  //expedition == id на издирване
+  const allExpeditions = realm.objects('Expedition');
+  const currExpedition = allExpeditions.filtered(`id=${expedition.toString()}`)[0];
+    this.setState({ startDate: getFormattedDate(currExpedition.startDate),
+                    leaderName: currExpedition.leaderName,
+                    expeditionID: expedition,
+                    expeditionTitle: currExpedition.expeditionName,
+                    recordMode: 2,
+     });
+     this.features = currExpedition.regionFeatures;
+     this.areaParameters.areaCoordinates = JSON.parse(currExpedition.regionCoordinates);
+     this.areaParameters.zoom = currExpedition.regionZoom;
+}
+
+refreshSelectedExpedition(id) {
+   const dataObj = {};
+   const allExpeditions = realm.objects('Expedition');
+   const currExpedition = allExpeditions.filtered(`id=${id.toString()}`)[0];
+   dataObj.expeditionId = id;
+   dataObj.expeditionName = currExpedition.expeditionName;
+   dataObj.regionCoords = JSON.parse(JSON.parse(currExpedition.regionCoordinates));
+   dataObj.regionZoom = currExpedition.regionZoom;
+   dataObj.regionFeatures = currExpedition.regionFeatures;
+   const responseJSON = {
+       exitState: 'select',
+       obj: dataObj,
+   };
+   this.selectedExpedition(responseJSON);
+   //функцията за прехвърляне на експедиция на картата(HomeScreen)
+}
+
+typesLoaded = async () => {
+    console.log('Loading types ...');
+    const newTypes = {
+        strJSON: '',
+    };
+
+    try {
+        const types = await fetch(
+            typesEndpoint,
+            {
+                method: 'GET',
+                t: global.ct
+            });
+
+        const typesJSON = await types.json();
+
+        if (typesJSON.meta.success === true) {
+            newTypes.strJSON = await JSON.stringify(typesJSON.data.types);
+            this.newAKBdbVersion.types = newTypes; //Save the types in a class accessible object
+            return true;
+        }
+
+        console.log('error', typesJSON.meta.errors);
+        Alert.alert(
+            'Get types - unsuccess error',
+            JSON.stringify(typesJSON.meta.errors)
+        );
+        return false;
+    } catch (e) {
+        console.log('error', e.toString());
+        Alert.alert('Get types - fetch error', e.toString());
+        return false;
+    }
+}
+
+tagsLoaded = async () => {
+    console.log('Loading tags description ...');
+    const newTags = {
+        strJSON: '',
+    };
+
+    try {
+        const tags = await fetch(
+            `${tagsEndpoint}0`,
+            {
+                method: 'GET',
+                t: global.ct
+            });
+
+        const tagsJSON = await tags.json();
+
+        if (tagsJSON.meta.success === true) {
+            newTags.strJSON = await JSON.stringify(tagsJSON.data.tags);
+            this.newAKBdbVersion.tags = newTags; //Return the tags in a global object
+            return true;
+        }
+
+        console.log('error', tagsJSON.meta.errors);
+        Alert.alert(
+            'Get tags - unsuccess error',
+            JSON.stringify(tagsJSON.meta.errors)
+        );
+        return false;
+    } catch (e) {
+        console.log('error', e.toString());
+        Alert.alert('Get tags - fetch error', e.toString());
+        return false;
+    }
+}
 
 sinchronizeWithAKBdb = async (ver) => {
         console.log('Loading AKB database ...');
@@ -618,95 +726,10 @@ regionCoordsDefinition = (regionCoords) => {
         });
     }
 
-dataCheck(expedition) {
-  //expedition == id на издирване
-  const allExpeditions = realm.objects('Expedition');
-  const currExpedition = allExpeditions.filtered(`id=${expedition}`)[0];
-    this.setState({ startDate: getFormattedDate(currExpedition.startDate),
-                    leaderName: currExpedition.leaderName,
-                    expeditionID: currExpedition.id,
-                    expeditionTitle: currExpedition.expeditionName,
-                    recordMode: 2,
-     });
-     this.features = currExpedition.regionFeatures;
-     this.areaParameters.areaCoordinates = JSON.parse(currExpedition.regionCoordinates);
-     this.areaParameters.zoom = currExpedition.regionZoom;
-}
-
-typesLoaded = async () => {
-    console.log('Loading types ...');
-    const newTypes = {
-        strJSON: '',
-    };
-
-    try {
-        const types = await fetch(
-            typesEndpoint,
-            {
-                method: 'GET',
-                t: global.ct
-            });
-
-        const typesJSON = await types.json();
-
-        if (typesJSON.meta.success === true) {
-            newTypes.strJSON = await JSON.stringify(typesJSON.data.types);
-            this.newAKBdbVersion.types = newTypes; //Save the types in a class accessible object
-            return true;
-        }
-
-        console.log('error', typesJSON.meta.errors);
-        Alert.alert(
-            'Get types - unsuccess error',
-            JSON.stringify(typesJSON.meta.errors)
-        );
-        return false;
-    } catch (e) {
-        console.log('error', e.toString());
-        Alert.alert('Get types - fetch error', e.toString());
-        return false;
-    }
-}
-
-tagsLoaded = async () => {
-    console.log('Loading tags description ...');
-    const newTags = {
-        strJSON: '',
-    };
-
-    try {
-        const tags = await fetch(
-            `${tagsEndpoint}0`,
-            {
-                method: 'GET',
-                t: global.ct
-            });
-
-        const tagsJSON = await tags.json();
-
-        if (tagsJSON.meta.success === true) {
-            newTags.strJSON = await JSON.stringify(tagsJSON.data.tags);
-            this.newAKBdbVersion.tags = newTags; //Return the tags in a global object
-            return true;
-        }
-
-        console.log('error', tagsJSON.meta.errors);
-        Alert.alert(
-            'Get tags - unsuccess error',
-            JSON.stringify(tagsJSON.meta.errors)
-        );
-        return false;
-    } catch (e) {
-        console.log('error', e.toString());
-        Alert.alert('Get tags - fetch error', e.toString());
-        return false;
-    }
-}
 
 selectedExpedition = (data) => {
-    console.log('Close expeditions screen ...');
     if (data.exitState === 'select') {
-        //this.setState({ expeditionID: data.obj.expeditionId });
+        this.setState({ expeditionID: data.obj.expeditionId });
         this.readExpeditionTracks(data.obj.expeditionId)
         .then((tracks) => {
             //On the map all points from all tracks are in one layer,
@@ -791,7 +814,7 @@ selectedExpedition = (data) => {
                     },
                     features: processedFeatures
                 };
-                //console.log("Features's data",data.obj.features);
+                //console.log("Features's data", data.obj.features);
 
                 this.emitTransferExpeditionData(data.obj);
             })
@@ -811,7 +834,7 @@ selectedExpedition = (data) => {
           `id=${this.state.expeditionID.toString()}`)[0];
         //if active expedition was deleted
         if (expedition === undefined) {
-            this.setState({ expeditionID: 0 });
+            this.setState({ expeditionID: -1 });
             global.refToWebView.emit('clear-expedition', { payload: {} });
         }
     }
@@ -843,6 +866,7 @@ emitCreateCheckpoint = (coordinates, accuracy, create) => {
  }
 
  readExpeditionTracks = (expeditionId) => {
+   console.log(`readExpeditionTracks ID: ${expeditionId}`);
      return new Promise((resolve, reject) => {
          try {
              const expeditions = realm.objects('Expedition');
@@ -916,9 +940,6 @@ renderModalEditExpedition() {
         closeModal={this.toggleModalwithDataCheck.bind(this)}
         expeditionID={this.state.expeditionID}
         recordMode={this.state.recordMode}
-        regionZoom={this.areaParameters.zoom}
-        regionCoordinates={JSON.stringify(this.areaParameters.areaCoordinates)}
-        regionFeatures={this.features}
       />
   );
 }
@@ -957,8 +978,8 @@ renderCardTools() {
     return (
       <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
         {iconBox('Избери регион', 'ios-map', 'navy')}
-        {iconBox('Зареди фичъри', 'ios-cloud-download', 'navy')}
-        {iconBox('Запази промените', 'ios-archive', 'navy')}
+        {iconBox('Зареди детайли', 'ios-cloud-download', 'navy')}
+        {iconBox('Качи в АКБ', 'ios-cloud-upload', 'navy')}
       </Card>
     );
   }

@@ -1,9 +1,8 @@
 import React, { Component } from 'react';
-import { View, Text, TouchableHighlight, Alert } from 'react-native';
+import { ScrollView, Text, View, Alert } from 'react-native';
 import Modal from 'react-native-modal';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Card, Button } from 'react-native-elements';
-import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
 // функция, която връща следващ идентификатор за запис в базата
 import { realm, NewExpeditionID } from '../components/RealmSchema';
@@ -873,7 +872,7 @@ renderCardEditExpedition() {
 
 render() {
       return (
-        <View>
+        <ScrollView>
           <View>
             {this.renderCardRegionSelect()}
           </View>
@@ -891,7 +890,7 @@ render() {
               {this.renderModalEditExpedition()}
             </Modal>
           </View>
-        </View>
+        </ScrollView>
     );
   }
 }

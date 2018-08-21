@@ -29,7 +29,6 @@ onPressListItem = ({ item }) => {
    this.props.navigation.navigate('Details', {
       titleExpedition: item.expeditionName,
       expID: item.id,
-      objExpedition: item,
   });
 }
 
@@ -133,9 +132,7 @@ renderListItem = ({ rowData, rowMap }) => (
             disableLeftSwipe
             onRowOpen={(rowKey, rowMap) => {
                 setTimeout(() => {
-                    rowMap[rowKey].closeRow();
-                    //!!! Да се направи проверка за празен списък
-                    //(напр. след изтриване на запис), иначе плюе грешка
+                    if (rowMap[rowKey] !== null) rowMap[rowKey].closeRow();
                 }, 5000);
             }}
             keyExtractor={item => `${item.id}`}

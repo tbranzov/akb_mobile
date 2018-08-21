@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { View } from 'react-native';
 import { WebView } from 'react-native-webview-messaging/WebView';
-//import { MainHTML } from '../components/constants';
+import { MainHTML } from '../components/constants';
 
 class HomeScreen extends Component {
   constructor(props) {
@@ -12,9 +12,9 @@ class HomeScreen extends Component {
      };
    }
 
-  componentDidMount() {
-
-  }
+componentDidMount() {
+ if (global.activeExpedition === -1) this.props.navigation.navigate('SingleExpedition');
+}
 
   refWebView = (webview) => {
      //this.webview = webview;
@@ -26,7 +26,8 @@ class HomeScreen extends Component {
       <View style={{ flex: 3 }}>
         <WebView
             //replace source with MainHTML constant
-            source={require('../../dist/index.html')}
+            //source={require('../../dist/index.html')}
+            source={MainHTML}
             style={{ flex: 1 }}
             ref={this.refWebView}
         />
