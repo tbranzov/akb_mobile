@@ -99,23 +99,23 @@ class FormExpedition extends Component {
   saveExpedition = (expeditionData, recordMode) =>
   new Promise((resolve, reject) => {
     const { expeditionID,
-                  expeditionTitle,
-                  leaderName,
-                  dateStart,
-                  numberOfDays,
-                  //regionCoordinates,
-                  //regionFeatures,
-                  //regionZoom,
-                  regionDescription } = expeditionData;
+            expeditionTitle,
+            leaderName,
+            dateStart,
+            numberOfDays,
+            //regionCoordinates,
+            //regionFeatures,
+            //regionZoom,
+            regionDescription } = expeditionData;
 
     if (recordMode === 1) { //  нов запис
       const expeditionRec = {};
       const dbVersions = realm.objects('AKBdbVersions');
       expeditionRec.dbVersionIndexAKB = dbVersions.length - 1;
       //При нова експедиция винаги трябва да се ползва последната версия на базата
-      expeditionRec.regionCoordinates = '';// JSON.stringify(regionCoordinates);
+      expeditionRec.regionCoordinates = JSON.stringify([]);// JSON.stringify(regionCoordinates);
       expeditionRec.regionZoom = 14;//regionZoom;
-      expeditionRec.regionFeatures = '';//regionFeatures;
+      expeditionRec.regionFeatures = JSON.stringify({});//regionFeatures;
       expeditionRec.id = expeditionID;
       expeditionRec.userRole = 'member';
       expeditionRec.expeditionName = expeditionTitle;
@@ -133,8 +133,8 @@ class FormExpedition extends Component {
             realm.create('Expedition', expeditionRec);
           });
           resolve(this.onEditSuccess(expeditionID));
-            } catch (e) {
-              reject(this.onEditFail());
+        } catch (e) {
+          reject(this.onEditFail());
         }
       } else { // редакция на съществуващ запис
         try {

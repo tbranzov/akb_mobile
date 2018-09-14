@@ -8,7 +8,7 @@
   <style>
 	@font-face {
 		font-family: "FontAwesome";
-		src: url(FontAwesome.ttf);
+		src: url(../fonts/FontAwesome.ttf);
 	}
 
 	.webViewTitle::before {
@@ -31,6 +31,21 @@
 		border-radius: 10px 10px 10px 0px;
 		padding: 5px 10px;
 	}
+
+	#movepoint_overlay {
+		-webkit-user-select: none;
+		width: 40px;
+		max-width: 40px;
+		height: 20px;
+		max-height: 20px;
+		background-color: red;
+		color: yellow;
+		border: 1px solid black;
+		border-radius: 0px 16px 16px 16px;
+		text-align: center;
+		vertical-align: middle;
+    padding: 20px;
+	}
   </style>
 
   <!-- <link rel="stylesheet" href="https://openlayers.org/en/v4.4.2/css/ol.css" type="text/css"> -->
@@ -45,12 +60,10 @@
   <div>
     <!-- <button id="hello">Send text to RN</button> -->
     <button id="clear" disabled="true">Clr</button>
-    <button id="point" disabled="true">Pnt</button>
+    <!--<button id="point" disabled="true">Pnt</button>-->
     <input id="track_point" type="checkbox" disabled="true"/>
     <label for="track_point">near tr pnt</label>
-    <button id="tiles">Tiles</button>
     <button id="epsg">EPSG</button>
-    <button id="close_overlay" disabled>Overlay</button>
   </div>
 <!--
   <div>
@@ -77,12 +90,12 @@
     <label for="view_corner_coords">region</label>
     <label for="view_track">
       <input id="view_track" type="checkbox" disabled="true"/>
-	  curr-track
-	</label>
-    <input id="view_checkpoints" type="checkbox" disabled="true"/>
+	    curr-track
+    </label>
+    <!--<input id="view_checkpoints" type="checkbox" disabled="true"/>
     <label for="view_checkpoints">pts</label>
     <input id="zoom_treshold" type="checkbox"/>
-    <label for="zoom_treshold">ft</label>
+    <label for="zoom_treshold">ft</label>-->
   </div>
   <div>
     accuracy : <code id="accuracy"></code>&nbsp;&nbsp;
@@ -94,10 +107,11 @@
 -->
 	zoom : <code id="zoom"></code>
   </div>
+  <div id="movepoint_overlay"/>
   <div id="onclick_overlay"  class="overlay" style="background-color: white;"/>
-  <div id="coordinate-overlay"/>
-  <div id="toprightoverlay" class="overlay" style="border-radius: 10px 0px 10px 10px;"/>
-  <div id="bottomleftoverlay" class="overlay"/>
+  <div id="coordinate_overlay" style="color: blue; background-color: rgba(245,245,220,0.5);"/>
+  <div id="topright_overlay" class="overlay" style="border-radius: 10px 0px 10px 10px; color: blue; border-color: blue; background-color: rgba(245,245,220,0.5);"/>
+  <div id="bottomleft_overlay" class="overlay" style="color: blue; border-color: blue; background-color: rgba(245,245,220,0.5);"/>
 
   <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x
   <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>  -->

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { TouchableOpacity, Alert, Text, View } from 'react-native';
 import { ListItem, Card } from 'react-native-elements';
-import Icon from 'react-native-vector-icons/Ionicons';
+import FontAwesome5Pro from 'react-native-vector-icons/FontAwesome5Pro';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { realm } from '../components/RealmSchema';
 // функция, която връща форматирана за изобразяване дата
@@ -9,7 +9,7 @@ import { getFormattedDate } from '../components/utilities';
 
 class ExpeditionList extends Component {
   static navigationOptions = ({ navigation }) => ({
-      title: navigation.getParam('headerTitle', 'Издирвания'),
+      title: navigation.getParam('headerTitle', ' Архив на издирвания'),
   });
 
   state = { expeditions: [], isModalVisible: false };
@@ -36,7 +36,10 @@ componentWillUnMount() {
   this.willFocusSubscription.remove();
 }
 
-willFocusHandler = () => this.readAllExpeditions();
+willFocusHandler = () => {
+  //Alert.alert('ExpeditionList', 'willFocusHandler');
+  this.readAllExpeditions();
+}
 
 readAllExpeditions() {
   //console.log('read all expeditions');
@@ -60,6 +63,7 @@ deleteData(id) {
     realm.write(() => {
       realm.delete(currExpedition); // Delete current expedition from database
     this.readAllExpeditions();
+    global.refToWebView.emit('clear-expedition', { payload: {} });
   }
   );
 }
@@ -87,7 +91,11 @@ renderNewExpedition() {
     >
       <Card flexDirection='row'>
           <View style={thumbnailContainerStyle} >
-            <Icon name={'ios-add'} size={50} color={'tomato'} />
+            <FontAwesome5Pro
+              name={'add'}
+              size={35}
+              color={'tomato'}
+            />
           </View>
           <View style={headerContentStyle} >
             <Text style={headerTextStyle}>{' Добавете  ново издирване '}</Text>
@@ -110,7 +118,12 @@ renderListItem = ({ rowData, rowMap }) => (
   renderListHiddenItem = ({ rowData, rowMap }) => (
       <View style={styles.rowBack}>
           <TouchableOpacity onPress={() => this.renderDeleteAlert(rowData.item.id)}>
-              <Icon name={'ios-trash'} size={50} color={'tomato'} />
+            <FontAwesome5Pro
+              light
+              name={'trash-alt'}
+              size={35}
+              color={'tomato'}
+            />
           </TouchableOpacity>
       </View>
     );
@@ -120,7 +133,7 @@ renderListItem = ({ rowData, rowMap }) => (
         <Card
           titleStyle={{ paddingTop: 12 }}
           dividerStyle={{ height: 3, marginBottom: 2, marginLeft: 10, marginRight: 10 }}
-          containerStyle={{ padding: 0, margin: 0, marginTop: 15 }}
+          containerStyle={{ padding: 0, margin: 0, marginTop: 0 }}
           title='Записани издирвания: '
         >
           <SwipeListView
@@ -144,7 +157,6 @@ renderListItem = ({ rowData, rowMap }) => (
   render() {
       return (
       <View>
-        {this.renderNewExpedition()}
         {this.renderExpeditions()}
       </View>
     );

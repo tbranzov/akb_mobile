@@ -1,5 +1,13 @@
 import Realm from 'realm';
 
+const SystemSettingsSchema = {
+    name: 'SystemSettings',
+    properties: {
+        settingsData: 'string[]',
+    }
+};
+
+
 //Object - container
 const UserCredentialsSchema = {
     name: 'UserCredentials',
@@ -158,12 +166,12 @@ const realm = new Realm(
     {
         path: 'akb_moby.realm',
         readOnly: false,
-        schema: [UserCredentialsSchema, AKBTypesSchema, AKBTagsSchema, AKBPointSchema,
-                  AKBdbSchema, AKBdbVersionsSchema, GeolocationSchema, TrackSchema,
-                  CheckPointSchema, ExpeditionSchema],
+        schema: [SystemSettingsSchema, UserCredentialsSchema, AKBTypesSchema, AKBTagsSchema,
+            AKBPointSchema, AKBdbSchema, AKBdbVersionsSchema, GeolocationSchema, TrackSchema,
+            CheckPointSchema, ExpeditionSchema],
         schemaVersion: 1,
         deleteRealmIfMigrationNeeded: true,
-        //!!!По някаква причина не трие успешно базата, ако се промени схемата 
+        //!!!По някаква причина не трие успешно базата, ако се промени схемата
     });
 
 export { realm,

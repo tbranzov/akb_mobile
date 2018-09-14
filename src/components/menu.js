@@ -6,9 +6,10 @@ import {
 	Text,
 	View,
 	ScrollView,
+	Button,
 	TouchableHighlight,
 } from 'react-native';
-import { Button } from 'react-native-elements';
+//import { Button } from 'react-native-elements';
 
 const { width, height } = Dimensions.get('window');
 
@@ -88,27 +89,34 @@ export default class Menu extends Component {
 
 	render() {
 		return (
-			<View style={{ flex: 1 },[styles.card, { marginTop: this.state.top, marginLeft: this.state.left, }]} onLayout={this.onLayout}>
-				<View>
-					{this.props.title === undefined ?
-						null :
-						<View style={{ backgroundColor: 'blue', padding: 6, }}>
-							<Text style={{ color: 'white', fontWeight: 'bold' }}>
-								{this.props.title}
-							</Text>
-						</View>
-					}
+			<View	style={{ flex: 1 }}>
+				<View
+					style={[styles.card,
+						{ marginTop: 20, marginLeft: this.state.left },
+					]}
+					onLayout={this.onLayout}
+				>
+					<View>
+						{this.props.title === undefined ?
+							null :
+							<View style={{ backgroundColor: 'blue', padding: 6, }}>
+								<Text style={{ color: 'white', fontWeight: 'bold' }}>
+									{this.props.title}
+								</Text>
+							</View>
+						}
+					</View>
+					<View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} >
+						<ScrollView>
+							{this.renderMenuItems()}
+						</ScrollView>
+					</View>
+					<Button
+						onPress={() => { this.props.onSelectMenuItem(-1); }}
+						title="Cancel"
+						color="#841584"
+					/>
 				</View>
-				<View style={{ height: 300 }} >
-					<ScrollView>
-						{this.renderMenuItems()}
-					</ScrollView>
-				</View>
-				<Button
-					onPress={() => { this.props.onSelectMenuItem(-1); }}
-					title="Cancel"
-					color="#841584"
-				/>
 			</View>
 		);
 	}
@@ -116,15 +124,16 @@ export default class Menu extends Component {
 
 const styles = StyleSheet.create({
 	card: {
-		width: 200,
+		width: width - 60, //200
+		maxHeight: height - 110,
 		borderRadius: 5,
 		padding: 2,
 		margin: 2,
-		backgroundColor: 'black',
-		justifyContent: 'space-between',
-		shadowOpacity: 0.54,
-		shadowRadius: 1,
-		shadowOffset: { width: 0, height: 1 },
-		elevation: 1,
+		backgroundColor: '#7f7f7f',
+		justifyContent: 'flex-start',
+		//shadowOpacity: 0.54,
+		//shadowRadius: 1,
+		//shadowOffset: { width: 0, height: 1 },
+		//elevation: 1,
 	},
 });

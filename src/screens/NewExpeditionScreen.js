@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { ScrollView, Text, View, Alert } from 'react-native';
 import Modal from 'react-native-modal';
+import { EventRegister } from 'react-native-event-listeners';
+import FontAwesome5Pro from 'react-native-vector-icons/FontAwesome5Pro';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Card, Button } from 'react-native-elements';
 import { FormExpedition } from '../components/FormExpedition';
@@ -34,7 +36,7 @@ class NewExpeditionScreen extends Component {
                startDate: '',
                leaderName: '',
                recordMode: '',
-               expeditionID: '',
+               expeditionID: NewExpeditionID(),
                tracks: [],
                regionSelected: false,
                featuresLoaded: false,
@@ -42,8 +44,8 @@ class NewExpeditionScreen extends Component {
                dbSinchronizationText: '',
                regionCoordsStateText: '',
                regionCoordsStateColor: '',
-               featuresStateText: '',
-               featuresStateColor: '',
+               //featuresStateText: '',
+               //featuresStateColor: '',
                isModalVisible: false
      };
 
@@ -65,13 +67,19 @@ class NewExpeditionScreen extends Component {
      this.features = ''; //Container for stringified JSON-features inside the selected region
      this.dataMode = dmUndefined;
      this.setNewDatamode = this.setNewDatamode.bind(this);
-     this.regionCoordsChanged = false; //true <- if features are manually reloaded by the user
-     this.featuresChanged = false; //true <- if features are manually loaded by the user
+     this.regionCoordsChanged = false;
+     //true <- if features are manually reloaded by the user
+     this.featuresChanged = false;
+     //true <- if features are manually loaded by the user
+     this.expeditionSaved = false;
+     //true <- Всички данни, описващи експедицията са записани в базата
   }
 
 componentDidMount() {
   const { messagesChannel } = global.refToWebView;
-  const titleExpedition = this.props.navigation.getParam('titleExpedition', 'Ново издирване');
+  //const titleExpedition = this.props.navigation.getParam('titleExpedition', 'Ново издирване');
+
+/*
 // макетна структура с примерни данни за тест на тракове и точки
 // да се изтрие при внедряване върху устройство
   const dummyGL1 = {
@@ -106,20 +114,33 @@ componentDidMount() {
   });
   // макетна структура за тест на тракове и точки
   // да се изтрие при внедряване върху устройство
+*/
 
-  //expeditionID: NewExpeditionID() // взема следващ идентификатор за запис в базата
-  this.setState({ expeditionID: NewExpeditionID(),
-                  recordMode: 1,
+  //const expeditionID = NewExpeditionID();
+  // взема следващ идентификатор за запис в базата
+
+  this.setState({ recordMode: 1,
                   expeditionTitle: 'Ново издирване'
    });
 
   messagesChannel.on('json', this.messageWebHandler);
+
+  this.willFocusSubscription =
+      this.props.navigation.addListener('willFocus', this.willFocusHandler);
+  //лисънър при добиване на фокус, напр. при превключване от таб в таб
 }
 
 componentWillUnmount() {
   const { messagesChannel } = global.refToWebView;
   // messageChannel - изтрива се с метода removeListener (а не removeEventListener)
   messagesChannel.removeListener('json', this.messageWebHandler);
+  this.willFocusSubscription.remove();
+}
+
+onPressSelectRegion = () => {
+  const routeCalledFrom = 'SingleExpedition';
+  EventRegister.emit('regionSelectRequest', routeCalledFrom);
+  this.props.navigation.navigate('Home');
 }
 
 setNewDatamode() {
@@ -133,7 +154,7 @@ setNewDatamode() {
                 this.loadFeatures(this.areaParameters.areaCoordinates.slice())
                 .then((result) => {
                     this.features = JSON.stringify({ state: 'loaded', data: result });
-                    Alert.alert('Features length = ', this.features.length.toString());
+                    Alert.alert('Размер на кеширани  елементи', `${this.features.length} байта`);
                 })
                 .catch((error) => {
                     this.features = JSON.stringify({ state: 'empty' });
@@ -150,6 +171,56 @@ setNewDatamode() {
         Alert.alert('Internet connection problem',
         'You have to login first, in order to create a new expedition.\nPlease, restore the internet connection and try again.');
     }
+}
+
+setDataFieldsState = (newState) => {
+  // Ако тази функция не се ползва, да се изтрие и там, където се вика!
+  /*
+  this.setState({
+    editExpeditionName: newState,
+    editLeaderName: newState,
+    editStartDate: newState,
+    editNumberOfDays: newState,
+    editRegionDescription: newState,
+  });
+
+  if (newState == true) {
+    this.setState({
+      inputFieldBackgroundColor: 'white',
+      placeholderForegroundColor: placeholderForeClr,
+    });
+  } else {
+    this.setState({
+      inputFieldBackgroundColor: disabledFieldBackClr,
+      placeholderForegroundColor: disabledFieldBackClr,
+    });
+  }
+  */
+}
+
+willFocusHandler = () => {
+  //this.setState({ expeditionID: global.activeExpedition });
+  if (global.activeExpedition !== -1 && global.activeExpedition !== this.state.expeditionID) this.props.navigation.popToTop();
+  this.setState({ tracks: [] });
+  if (global.activeExpedition !== -1) {
+    this.dataCheck(global.activeExpedition);
+
+    //Alert.alert('CurrentExpeditionScreen: global.activeExpedition',
+    //    global.activeExpedition.toString());
+    this.readExpeditionTracks(global.activeExpedition)
+    .then((expeditionTracks) => {
+      const tracksCnt = expeditionTracks.length;
+      const tracks = [];
+      const track = {};
+      for (let i = 0; i < tracksCnt; i++) {
+        track.trackName = expeditionTracks.trackName;
+        track.trackDate = expeditionTracks.trackDate;
+        track.geoLocations = expeditionTracks.geoLocations;
+        tracks.push(track);
+      }
+      this.setState({ tracks });
+    });
+  }
 }
 
 sinchronizeWithAKBdb = async (ver) => {
@@ -394,6 +465,7 @@ loadTagsById = async (id, tagcode) => {
     }
 }
 
+//Същата функция я има и в CurrentExpeditionScreen
 loadFeatures = (regionCoords) => {
     console.log('Loading features from server...');
     return new Promise((resolve, reject) => {
@@ -436,14 +508,14 @@ loadFeatures = (regionCoords) => {
                 if (featuresJSON.meta.success === true) {
                     //console.log(JSON.stringify(featuresJSON.data.features,null,2));
                     global.dbVerAKB = featuresJSON.meta.version; //Update the active (last) version
-                    this.setState({ featuresStateText: 'LOADED', featuresStateColor: 'green' });
+                    //this.setState({ featuresStateText: 'LOADED', featuresStateColor: 'green' });
                     this.featuresChanged = true;
                     resolve(featuresJSON.data.features);
                 } else {
-                    this.setState({ featuresStateText: 'EMPTY', featuresStateColor: 'red' });
+                    //this.setState({ featuresStateText: 'EMPTY', featuresStateColor: 'red' });
                     console.log('error', featuresJSON.meta.errors);
                     Alert.alert(
-                        'Get tags - unsuccess error',
+                        'Load features - unsuccess error',
                         JSON.stringify(featuresJSON.meta.errors)
                     );
 
@@ -453,13 +525,13 @@ loadFeatures = (regionCoords) => {
             })
             .catch((e) => {
                 console.log(e);
-                Alert.alert('error', e.toString());
+                Alert.alert('Load features', e.toString());
                 reject(e);
             });
         })
         .catch((e) => {
             console.log(e);
-            Alert.alert('error', e.toString());
+            Alert.alert('Load features', e.toString());
             reject(e);
         });
 
@@ -469,14 +541,16 @@ loadFeatures = (regionCoords) => {
 
 messageWebHandler = (jsonObject) => {
     switch (jsonObject.command) {
-        default: // 'save-area-coordinates':
-            this.areaParameters.areaCoordinates = jsonObject.payload.areaCoords;
-            this.areaParameters.zoom = jsonObject.payload.zoom;
-            console.log('area polygon point count: ', this.areaParameters.areaCoordinates.length);
-            this.setState({ regionSelected: true });
-            this.regionCoordsChanged = true;
-            break;
-      }
+      case 'save-area-coordinates':
+        this.areaParameters.areaCoordinates = jsonObject.payload.areaCoords;
+        this.areaParameters.zoom = jsonObject.payload.zoom;
+        console.log('area polygon point count: ', this.areaParameters.areaCoordinates.length);
+        this.setState({ regionSelected: true });
+        this.regionCoordsChanged = true;
+      break;
+      default:
+      break;
+    }
 }
 
 regionCoordsDefinition = (regionCoords) => {
@@ -497,8 +571,15 @@ regionCoordsDefinition = (regionCoords) => {
     }
 
 dataCheck(expedition) {
+  /*
+    let startDateStr = '';
+    if (this.dataMode === dmNewData) {
+      startDateStr = getFormattedDate(new Date());
+    } else {
+      startDateStr = getFormattedDate(expedition.startDate);
+    }
     //Променя състоянието в зависимост от стойностите в подадения обект
-    this.setState({ startDate: getFormattedDate(expedition.startDate),
+    this.setState({ startDate: startDateStr,
                     leaderName: expedition.leaderName,
                     expeditionID: expedition.id,
                     expeditionTitle: expedition.expeditionName,
@@ -507,6 +588,15 @@ dataCheck(expedition) {
      this.features = expedition.regionFeatures;
      this.areaParameters.areaCoordinates = JSON.parse(expedition.regionCoordinates);//!!!!ТУККККК
      this.areaParameters.zoom = expedition.regionZoom;
+     */
+     const allExpeditions = realm.objects('Expedition');
+     const currExpedition = allExpeditions.filtered(`id=${expedition.toString()}`)[0];
+     this.setState({ startDate: getFormattedDate(currExpedition.startDate),
+                     leaderName: currExpedition.leaderName,
+                     expeditionID: expedition,
+                     expeditionTitle: currExpedition.expeditionName,
+                     recordMode: 2,
+      });
 }
 
 typesLoaded = async () => {
@@ -600,6 +690,7 @@ selectedExpedition = (data) => {
                 currTrackData = {};
                 const len = tracks[i].geoLocations.length;
                 notEmptyTrack = len > 0;
+                //For all geolocations in current track
                 for (let j = 0; j < len; j++) {
                     coords = [];
                     coords.push(tracks[i].geoLocations[j].coordinates[0]);
@@ -746,6 +837,7 @@ emitTransferExpeditionData = (obj) => {
 }
 
 makeActiveExpedition() {
+      /*
       const dataObj = {};
       dataObj.expeditionId = this.state.expeditionID;
       dataObj.expeditionName = this.state.expeditionTitle;
@@ -758,13 +850,41 @@ makeActiveExpedition() {
       };
       this.selectedExpedition(responseJSON);
       //функцията за прехвърляне на експедиция на картата(HomeScreen)
+
       global.activeExpedition = dataObj.expeditionId;
       // Указва избраната експедиция като активна
-  }
+      */
+      if (this.expeditionSaved) {
+      global.activeExpedition = this.state.expeditionID;
+
+      const expeditions = realm.objects('Expedition');
+      const expedition = expeditions.filtered(`id=${this.state.expeditionID}`)[0];
+      try {
+        console.log('expedition', expedition);
+        realm.write(() => {
+          expedition.regionCoordinates = JSON.stringify(this.areaParameters.areaCoordinates);
+          expedition.regionZoom = this.areaParameters.zoom;
+          expedition.regionFeatures = this.features;
+        });
+      } catch (e) {
+        Alert.alert('makeActiveExpedition', e.toString());
+      }
+
+      // Указва избраната експедиция като активна
+      EventRegister.emit('expeditionStateChanged', this.state.expeditionID);
+      this.props.navigation.navigate('Expedition', {
+         titleExpedition: this.state.expeditionName,
+         expID: this.state.expeditionID,
+     });
+   } else {
+     Alert.alert('Внимание!',
+     'Необходимо е да въведете всички данни, описващи издарването, преди да го направите активно!');
+   }
+}
 
 loadActiveFeaturesHandler() {
     if (isEmpty(this.areaParameters.areaCoordinates)) {
-        Alert.alert('Warning', 'You must set region coordinates first!');
+        Alert.alert('Внимание', 'Необходимо е да укажете регион на издирването!');
     } else {
         this.setNewDatamode();
     }
@@ -775,6 +895,7 @@ toggleModalwithDataCheck(expRec) {
         this.dataCheck(expRec);
         this.featuresChanged = false;
         this.regionCoordsChanged = false;
+        this.expeditionSaved = true;
     }
 
     this.toggleModal();
@@ -803,17 +924,15 @@ renderModalEditExpedition() {
 renderCardRegionSelect() {
     const { regionSelected } = this.state;
     return (
-      <Card flexDirection='row' wrapperStyle={styles.containerCard}>
-          <View style={thumbnailContainerStyle} >
-              <Text style={{ fontSize: 50 }}>1.</Text>
-          </View>
+      <Card title="1. Изберете регион на издирването">
           <Button
             raised
-             backgroundColor='steelblue'
-            containerViewStyle={{ width: '80%' }}
+            icon={{ name: 'hand-pointer-o', type: 'font-awesome' }}
+            backgroundColor='steelblue'
+            containerViewStyle={{ width: '90%' }}
              buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
-             onPress={() => this.props.navigation.navigate('Home')}
-             title={regionSelected ? 'Регион - избран!' : 'Избери регион на издирването'}
+             onPress={this.onPressSelectRegion}
+             title={regionSelected ? 'Регион - избран!' : 'Избери регион'}
           />
       </Card>
     );
@@ -824,17 +943,15 @@ renderCardRegionSelect() {
   renderCardLoadFeatures() {
       const { featuresLoaded } = this.state;
       return (
-        <Card flexDirection='row' wrapperStyle={styles.containerCard}>
-            <View style={thumbnailContainerStyle} >
-                <Text style={{ fontSize: 50 }}>2.</Text>
-            </View>
+        <Card title="2. Заредeте детайли от ГИС АКБ" >
             <Button
               raised
+              icon={{ name: 'map-o', type: 'font-awesome' }}
                backgroundColor='steelblue'
-              containerViewStyle={{ width: '80%' }}
+              containerViewStyle={{ width: '90%' }}
                buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
                onPress={this.loadActiveFeaturesHandler.bind(this)}
-               title={featuresLoaded ? 'Детайлите са заредени!' : 'Зареди детайли от АКБ-ГИС'}
+               title={featuresLoaded ? 'Детайлите са заредени!' : 'Зареди детайли'}
             />
         </Card>
       );
@@ -844,27 +961,26 @@ renderCardRegionSelect() {
 renderCardTools() {
     return (
       <Card flexDirection='row' wrapperStyle={{ justifyContent: 'center' }}>
-        {iconBox('Направи активна', 'ios-bookmarks', 'steelblue', this.makeActiveExpedition.bind(this))}
-        {iconBox('Откажи', 'ios-close', 'steelblue')}
+        {iconBox('Направи активно', 'ios-bookmarks', 'steelblue', this.makeActiveExpedition.bind(this))}
+        {iconBox('Откажи', 'ios-close', 'tomato')}
       </Card>
     );
 }
 
 // Рендва карта за вход във формата за редактиране на данните за издиравне
 renderCardEditExpedition() {
-    const { expeditionTitle } = this.state;
     return (
-      <Card flexDirection='row' wrapperStyle={styles.containerCard}>
-          <View style={thumbnailContainerStyle} >
-              <Text style={{ fontSize: 50 }}>3.</Text>
-          </View>
+      <Card title="3. Въведете описателни данни" >
           <Button
             raised
+            icon={{ name: 'file-text-o', type: 'font-awesome' }}
             backgroundColor='steelblue'
-            containerViewStyle={{ width: '80%' }}
+            containerViewStyle={{ width: '90%' }}
             buttonStyle={{ borderRadius: 0, marginLeft: 0, marginRight: 0, marginBottom: 0 }}
             onPress={this.toggleModal}
-            title={'Въведи описателни данни за издирването'}
+            title={!this.expeditionSaved ?
+              'Въведи данни' :
+              'Данните са въведени'}
           />
       </Card>
     );
@@ -1010,7 +1126,7 @@ const iconBox = (textLabel, msgIcon, clrIcon, onPressHandler) => (
       <View>
         <Icon
           name={msgIcon}
-          size={40}
+          size={30}
           type='ionicon'
           color={clrIcon}
           iconStyle={styles.messageIcon}

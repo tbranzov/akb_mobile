@@ -1,10 +1,11 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { createStackNavigator,
           createSwitchNavigator,
           createBottomTabNavigator } from 'react-navigation';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import FontAwesome5Pro from 'react-native-vector-icons/FontAwesome5Pro';
 import { HomeScreen,
-          SettingsScreen,
+          SettingsScreen, SettingsDetailScreen,
           CurrentExpedition, NewExpeditionScreen,
           ExpeditionList, ExpeditionDetailsScreen, ScreenSplash, ScreenLogin } from './screens';
 
@@ -27,6 +28,11 @@ const stackSplash = createStackNavigator({
   SplashScreen: { screen: ScreenSplash }
   });
 
+const stackSettings = createStackNavigator({
+  Settings: { screen: SettingsScreen },
+  SettingsDetail: { screen: SettingsDetailScreen }
+  });
+
 const stackTab = createBottomTabNavigator(
   {
       Home: { screen: HomeScreen,
@@ -44,7 +50,7 @@ const stackTab = createBottomTabNavigator(
            tabBarLabel: 'Архив'
            }
           },
-      Settings: { screen: SettingsScreen,
+      Settings: { screen: stackSettings,
                 navigationOptions: {
           tabBarLabel: 'Настройки'
           }
@@ -54,17 +60,18 @@ const stackTab = createBottomTabNavigator(
      navigationOptions: ({ navigation }) => ({
        tabBarIcon: ({ focused, tintColor }) => {
          const { routeName } = navigation.state;
-         let iconName;
+         let iconRender;
          if (routeName === 'Home') {
-           iconName = `ios-map${focused ? '' : '-outline'}`;
+           iconRender = focused ? IconMap : IconMapOutlined;
          } else if (routeName === 'Settings') {
-           iconName = `ios-options${focused ? '' : '-outline'}`;
+           iconRender = focused ? IconSettings : IconSettingsOutlined;
          } else if (routeName === 'Expeditions') {
-           iconName = `ios-folder${focused ? '' : '-outline'}`;
+           iconRender = focused ? IconArchive : IconArchiveOutlined;
          } else if (routeName === 'SingleExpedition') {
-           iconName = `ios-bookmarks${focused ? '' : '-outline'}`;
+           iconRender = focused ? IconExp : IconExpOutlined;
          }
-         return <Ionicons name={iconName} size={25} color={tintColor} />;
+         //return <Ionicons name={iconName} size={25} color={tintColor} />;
+        return iconRender;
        },
      }),
      tabBarOptions: {
@@ -73,6 +80,28 @@ const stackTab = createBottomTabNavigator(
      },
    }
 );
+
+const styles = StyleSheet.create({
+  activeIcon: {
+    fontSize: 25,
+    height: 25,
+    color: 'tomato',
+  },
+  inactiveIcon: {
+    fontSize: 25,
+    height: 25,
+    color: 'gray',
+  },
+});
+
+const IconMap = (<FontAwesome5Pro name='map' style={styles.activeIcon} solid />);
+const IconMapOutlined = (<FontAwesome5Pro name='map' style={styles.inactiveIcon} light />);
+const IconExp = (<FontAwesome5Pro name='file-alt' style={styles.activeIcon} solid />);
+const IconExpOutlined = (<FontAwesome5Pro name='file-alt' style={styles.inactiveIcon} light />);
+const IconArchive = (<FontAwesome5Pro name='folder-open' style={styles.activeIcon} solid />);
+const IconArchiveOutlined = (<FontAwesome5Pro name='folder-open' style={styles.inactiveIcon} light />);
+const IconSettings = (<FontAwesome5Pro name='sliders-h' style={styles.activeIcon} light />);
+const IconSettingsOutlined = (<FontAwesome5Pro name='sliders-h' style={styles.inactiveIcon} light />);
 
 const Nav = createSwitchNavigator(
   {

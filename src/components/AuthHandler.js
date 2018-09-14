@@ -51,30 +51,48 @@ class AuthHandler extends Component {
 
   doAccessTokenRefresh = (callFrom) => {
     const { Comm } = this.props;
+    let internet;
     if (Comm === undefined || Comm === 'none' || Comm === 'unknown') {
+      internet = { available: false };
       this.handleAuthStateChange({ Authenticated: 0,
                     infoMessage: authStatusNoComm });
-     } else {
-       const refreshAT = (refreshToken) => {
+    } else {
+      internet = { available: true };
+      const refreshAT = (refreshToken) => {
            this.refreshAccessToken(refreshToken);
-       };
 
-       //Read user credentials from Realm database to get refresh token for access token
-       //refreshing purpose
-       this.readCredentials()
-           .then((credentials) => {
-               if (credentials === undefined) {
-                this.handleAuthStateChange({ Authenticated: -1,
-                              infoMessage: authStatusUnsuccessNoCred });
-                // Хендлъра трябва да извика логин формата
-               } else {
-                refreshAT(credentials.rt);
-               }
-           })
-           .catch((err) => {
-               console.log('Error on reading credentials!', err.toString());
-               Alert.alert(callFrom, `Error on reading credentials!\n${err.toString()}`);
-           });
+           if (global.refToWebView !== 'null') {
+             global.refToWebView.emit('transferAccessToken',
+               { payload: { accessToken: global.ct } });
+           }
+      };
+
+      //Read user credentials from Realm database to get refresh token for access token
+      //refreshing purpose
+      this.readCredentials()
+        .then((credentials) => {
+            if (credentials === undefined) {
+               this.handleAuthStateChange({ Authenticated: -1,
+                            infoMessage: authStatusUnsuccessNoCred });
+              // Хендлъра трябва да извика логин формата
+            } else {
+               refreshAT(credentials.rt);
+            }
+        })
+        .catch((err) => {
+            console.log('Error on reading credentials!', err.toString());
+            Alert.alert(callFrom, `Error on reading credentials!\n${err.toString()}`);
+        });
+    }
+
+    /*
+    global.refToWebView === 'null', когато не е завършило монтирането на компонента
+    WebView. В този случай отговорно за прехвърляне на AccessToken и състоянието„
+    на мрежата има свойството onNavigationStateChange в WebView. Това става в
+    модула HomeScreen.
+    */
+    if (global.refToWebView !== 'null') {
+      global.refToWebView.emit('internetConnectionChanged', { internet });
     }
   }
 

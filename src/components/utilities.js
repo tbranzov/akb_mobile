@@ -20,11 +20,11 @@ function twoDigitsFormat(number) {
 }
 
 function getFormattedDate(date) {
-  const formattedDate =
-    date.getFullYear().toString() + "-" +
-    twoDigitsFormat(date.getMonth() + 1) + "-" +
-    twoDigitsFormat(date.getDate());
-  return (formattedDate);
+ const dd = twoDigitsFormat(date.getDate());
+ const mm = twoDigitsFormat(date.getMonth() + 1);
+ const yyyy = date.getFullYear().toString();
+ const formattedDate = `${yyyy}-${mm}-${dd}`;
+ return (formattedDate);
 }
 
 function getPointTypes(realm) {

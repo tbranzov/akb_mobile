@@ -1,17 +1,20 @@
 import React, { Component } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Modal from 'react-native-modal';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { Card, Button } from 'react-native-elements';
+import { NavigationActions } from 'react-navigation';
+import FontAwesome5Pro from 'react-native-vector-icons/FontAwesome5Pro';
 import { EventRegister } from 'react-native-event-listeners';
 import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
+import ProgressBar from '../components/Progress/Bar';
 import CheckpointScreen from '../components/checkpoint';
 import Menu from '../components/menu';
+import { HeaderScreen } from '../components/common';
 // функция, която връща следващ идентификатор за запис в базата
 import { realm } from '../components/RealmSchema';
 // функция, която връща форматирана за изобразяване дата
-import { getFormattedDate, getPointTypes } from '../components/utilities';
+import { getFormattedDate, getPointTypes, getType } from '../components/utilities';
 import { serverIPaddr,
           typesEndpoint,
           tagsEndpoint,
@@ -26,27 +29,36 @@ import { serverIPaddr,
 
 class CurrentExpedition extends Component {
   // Текстът-заглавие в навигационната лента (горе на екрана)
-  static navigationOptions = ({ navigation }) => ({
+  /* static navigationOptions = ({ navigation }) => ({
       title: navigation.getParam('titleExpedition', 'Активно издирване'),
+      headerRight: (
+        <View>
+          {navigation.getParam('deselectExp')}
+        </View>
+      )
     });
+*/
+static navigationOptions = { header: null }
 
   constructor(props) {
      super(props);
 
-     this.state = { expeditionTitle: '',
+     this.state = { expeditionTitle: 'Няма активно издирване',
                startDate: '',
                leaderName: '',
                recordMode: 2,
                expeditionID: -1,
+               currTrackName: '-',
                tracks: [],
                regionSelected: false,
                dataModeText: '',
                dbSinchronizationText: '',
                regionCoordsStateText: '',
                regionCoordsStateColor: '',
-               featuresStateText: '',
-               featuresStateColor: '',
+               //featuresStateText: '',
+               //featuresStateColor: '',
                isModalVisible: false,
+               modalProgressVisible: false,
                menuVisible: false,
                modalCheckpointVisible: false,
                GPScoordinates: [], // Координати на точка
@@ -84,12 +96,24 @@ class CurrentExpedition extends Component {
      this.checkpointTitle = '';
      //
      this.MenuSelectedItem = false;
+     this.progressBarCaption = '';
+     trackName: '' // Име на текущ track
   }
 
 componentDidMount() {
   const { messagesChannel } = global.refToWebView;
+
+  this.willFocusSubscription =
+      this.props.navigation.addListener('willFocus', this.willFocusHandler);
+  //лисънър при добиване на фокус, напр. при превключване от таб в таб
+
+  this.stateExpeditionChangedSubscription =
+    EventRegister.addEventListener('expeditionStateChanged', this.stateExpeditionChangedHandler);
+
+  messagesChannel.on('json', this.messageWebHandler);
 // макетна структура с примерни данни за тест на тракове и точки
 // да се изтрие при внедряване върху устройство
+/*
   const dummyGL1 = {
       coordinates: [57.15, 43.12, 67.18, 23.31],
       accuracy: 5,
@@ -120,17 +144,9 @@ componentDidMount() {
                   geoLocations: dummyGL2 },
     ]
   });
-  // макетна структура за тест на тракове и точки
-  // да се изтрие при внедряване върху устройство
-
-  this.willFocusSubscription =
-      this.props.navigation.addListener('willFocus', this.willFocusHandler);
-  //лисънър при добиване на фокус, напр. при превключване от таб в таб
-
-  this.stateExpeditionChangedSubscription =
-    EventRegister.addEventListener('expeditionStateChanged', this.stateExpeditionChangedHandler);
-
-  messagesChannel.on('json', this.messageWebHandler);
+*/
+// макетна структура за тест на тракове и точки
+// да се изтрие при внедряване върху устройство
 }
 
 componentWillUnmount() {
@@ -139,6 +155,12 @@ componentWillUnmount() {
   messagesChannel.removeListener('json', this.messageWebHandler);
   this.willFocusSubscription.remove();
   EventRegister.removeEventListener(this.stateExpeditionChangedSubscription);
+}
+
+onPressSelectRegion = () => {
+  const routeCalledFrom = 'SingleExpedition';
+  EventRegister.emit('regionSelectRequest', routeCalledFrom);
+  this.props.navigation.navigate('Home');
 }
 
 setNewDatamode() {
@@ -171,46 +193,127 @@ setNewDatamode() {
     }
 }
 
+setDataFieldsState = (newState) => {
+  // Ако тази функция не се ползва, да се изтрие и там, където се вика!
+  /*
+  this.setState({
+    editExpeditionName: newState,
+    editLeaderName: newState,
+    editStartDate: newState,
+    editNumberOfDays: newState,
+    editRegionDescription: newState,
+  });
+
+  if (newState == true) {
+    this.setState({
+      inputFieldBackgroundColor: 'white',
+      placeholderForegroundColor: placeholderForeClr,
+    });
+  } else {
+    this.setState({
+      inputFieldBackgroundColor: disabledFieldBackClr,
+      placeholderForegroundColor: disabledFieldBackClr,
+    });
+  }
+  */
+}
+
+deselectExpedition = () => {
+  const ae = global.activeExpedition;
+  if (ae >= 0) {
+      return (
+        iconFAButton(
+        { light: 'light' },
+        'times',
+        'tomato',
+        28,
+        'rgba(0, 0, 0, .05)',
+        () => global.refToWebView.emit('clear-expedition', { payload: {} })
+      )
+    );
+  }
+
+  return (null);
+}
+
 willFocusHandler = () => {
+  //Alert.alert('CurrentExpeditionScreen', 'willFocusHandler');
   console.log(`From focushandler: ${global.activeExpedition} StateID: ${this.state.expeditionID}`);
-  if (global.activeExpedition !== -1) { this.dataCheck(global.activeExpedition); }
+  this.setState({ tracks: [] });
+  if (global.activeExpedition !== -1) {
+    this.dataCheck(global.activeExpedition);
+  }
 }
 
 stateExpeditionChangedHandler = (id) => {
   console.log(`From ExpStateHandler: ${id} StateID: ${this.state.expeditionID}`);
+  this.deselectExpedition();
   this.refreshSelectedExpedition(id);
 }
 
 dataCheck(expedition) {
-  //expedition == id на издирване
-  const allExpeditions = realm.objects('Expedition');
-  const currExpedition = allExpeditions.filtered(`id=${expedition.toString()}`)[0];
-    this.setState({ startDate: getFormattedDate(currExpedition.startDate),
-                    leaderName: currExpedition.leaderName,
-                    expeditionID: expedition,
-                    expeditionTitle: currExpedition.expeditionName,
-                    recordMode: 2,
-     });
-     this.features = currExpedition.regionFeatures;
-     this.areaParameters.areaCoordinates = JSON.parse(currExpedition.regionCoordinates);
-     this.areaParameters.zoom = currExpedition.regionZoom;
+ //expedition == id на издирване
+
+ const allExpeditions = realm.objects('Expedition');
+ const currExpedition = allExpeditions.filtered(`id=${expedition.toString()}`)[0];
+
+ const tracks = [];
+ const tracksCnt = currExpedition.tracks.length;
+ for (let i = 0; i < tracksCnt; i++) {
+   const track = {};
+   const currTrack = currExpedition.tracks[i];
+   track.trackName = currTrack.trackName;
+   track.trackDate = getFormattedDate(currTrack.trackDate);
+   console.log('track.trackDate', track.trackDate);
+   track.geoLocations = currTrack.geoLocations;
+   track.photos = currTrack.photos;
+   track.featureId = currTrack.featureId;
+   tracks.push(track);
+ }
+
+ this.setState({
+   startDate: getFormattedDate(currExpedition.startDate),
+   leaderName: currExpedition.leaderName,
+   expeditionID: expedition,
+   expeditionTitle: currExpedition.expeditionName,
+   tracks,
+   recordMode: 2,
+ });
+ this.features = currExpedition.regionFeatures;
+ this.areaParameters.areaCoordinates = JSON.parse(currExpedition.regionCoordinates);
+ this.areaParameters.zoom = currExpedition.regionZoom;
 }
 
 refreshSelectedExpedition(id) {
-   const dataObj = {};
-   const allExpeditions = realm.objects('Expedition');
-   const currExpedition = allExpeditions.filtered(`id=${id.toString()}`)[0];
-   dataObj.expeditionId = id;
-   dataObj.expeditionName = currExpedition.expeditionName;
-   dataObj.regionCoords = JSON.parse(JSON.parse(currExpedition.regionCoordinates));
-   dataObj.regionZoom = currExpedition.regionZoom;
-   dataObj.regionFeatures = currExpedition.regionFeatures;
-   const responseJSON = {
+    const dataObj = {};
+    const allExpeditions = realm.objects('Expedition');
+    const currExpedition = allExpeditions.filtered(`id=${id.toString()}`)[0];
+    dataObj.expeditionId = id;
+    dataObj.expeditionName = currExpedition.expeditionName;
+
+    /*
+    console.log('regionCoordinates', currExpedition.regionCoordinates);
+    let coordsType = getType(currExpedition.regionCoordinates);
+    console.log('the type of regionCoordinates is: ', coordsType);
+    const regCoordsJSON = JSON.parse(currExpedition.regionCoordinates);
+    console.log('regCoordsJSON', regCoordsJSON);
+    coordsType = getType(regCoordsJSON);
+    console.log('the type of regionCoordinates is: ', coordsType);
+    */
+    dataObj.regionCoords = JSON.parse(currExpedition.regionCoordinates);
+    if (getType(dataObj.regionCoords) === 'String') {
+      dataObj.regionCoords = JSON.parse(dataObj.regionCoords);
+      console.log('CurrentExpeditionScreen(refreshSelectedExpedition): WARNING: Double parsing!');
+    }
+
+    dataObj.regionZoom = currExpedition.regionZoom;
+    dataObj.regionFeatures = currExpedition.regionFeatures;
+    const responseJSON = {
        exitState: 'select',
        obj: dataObj,
-   };
-   this.selectedExpedition(responseJSON);
-   //функцията за прехвърляне на експедиция на картата(HomeScreen)
+    };
+    this.selectedExpedition(responseJSON);
+    //функцията за прехвърляне на експедиция на картата(HomeScreen)
 }
 
 typesLoaded = async () => {
@@ -525,13 +628,14 @@ loadTagsById = async (id, tagcode) => {
     }
 }
 
+//Същата функция я има и в NewExpeditionScreen
 loadFeatures = (regionCoords) => {
-    console.log('Loading features from server...');
+    //console.log('Loading features from server...');
     return new Promise((resolve, reject) => {
         let currStrCoords;
         const arr = [];
         //const regionCoords = this.areaParameters.areaCoordinates;
-        console.log(`regionCoords value: ${regionCoords}`);
+        //console.log(`regionCoords value: ${regionCoords}`);
         let regionStrCoords = '';
         for (let i = 0; i < regionCoords.length; i++) {
             currStrCoords = `geo[${i.toString()}][]=${regionCoords[i][0].toString()}&geo[${i.toString()}][]=${regionCoords[i][1].toString()}`;
@@ -567,14 +671,14 @@ loadFeatures = (regionCoords) => {
                 if (featuresJSON.meta.success === true) {
                     //console.log(JSON.stringify(featuresJSON.data.features,null,2));
                     global.dbVerAKB = featuresJSON.meta.version; //Update the active (last) version
-                    this.setState({ featuresStateText: 'LOADED', featuresStateColor: 'green' });
+                    //this.setState({ featuresStateText: 'LOADED', featuresStateColor: 'green' });
                     this.featuresChanged = true;
                     resolve(featuresJSON.data.features);
                 } else {
-                    this.setState({ featuresStateText: 'EMPTY', featuresStateColor: 'red' });
+                    //this.setState({ featuresStateText: 'EMPTY', featuresStateColor: 'red' });
                     console.log('error', featuresJSON.meta.errors);
                     Alert.alert(
-                        'Get tags - unsuccess error',
+                        'Load features - unsuccess error',
                         JSON.stringify(featuresJSON.meta.errors)
                     );
 
@@ -584,73 +688,94 @@ loadFeatures = (regionCoords) => {
             })
             .catch((e) => {
                 console.log(e);
-                Alert.alert('error', e.toString());
-                reject(e);
+                Alert.alert('Load features', e.toString());
+                const reason = new Error('Error400');
+                reject(reason);
             });
         })
         .catch((e) => {
             console.log(e);
-            Alert.alert('error', e.toString());
+            Alert.alert('Load features', e.toString());
             reject(e);
         });
 
-        console.log('end');
+        //console.log('end');
     });
 }
 
 openPointForm(geolocation, datamode) {
-    console.log('Open point data screen ...');
+  console.log('Open point data screen ...');
 
-    this.setState({
-        GPScoordinates: geolocation.coordinates,
-        GPSaccuracy: geolocation.accuracy,
-        checkPointDataMode: datamode,
-        // Да се въведе съобщение за потребителите, когато данните бъдат записани
-        //selectedNotes: [],
-        //checkpointPhotos: [],
-    });
+  this.setState({
+      GPScoordinates: geolocation.coordinates,
+      GPSaccuracy: geolocation.accuracy,
+      checkPointDataMode: datamode,
+      // Да се въведе съобщение за потребителите, когато данните бъдат записани
+      //selectedNotes: [],
+      //checkpointPhotos: [],
+  });
 
+  if (datamode === 'new') {
+    this.processMenuItem = this.editPoint;
+    this.menuTitle = 'Create point of type';
+    this.menuItems = getPointTypes(realm);
+    this.setState({ menuVisible: true });
+  } else {
     Alert.alert(
-        'Select',
-        'Point operation',
-        [
-            { text: 'Move', onPress: () => { } },
-            { text: 'Edit',
-              onPress: () => {
-                Alert.alert(
-                    'Select',
-                    'Modal panel type for point data',
-                    [
-                        {
-                          text: 'Old',
-                          onPress: () => this.setState({ modalPointControlVisible: true })
-                        },
-                        {
-                        text: 'New',
-                        onPress: () => {
-                            if (datamode === 'new') {
-                                this.processMenuItem = this.editPoint;
-                                this.menuTitle = 'Create point of type';
-                                this.menuItems = getPointTypes(realm);
-                                this.setState({ menuVisible: true });
-                            } else {
-                                this.checkpointType = -1; //Read the type from DB
-                                this.setState({ modalCheckpointVisible: true });
-                            }
-                        } },
-                        { text: 'Cancel', onPress: () => { }, style: 'cancel' },
-                    ],
-                    { cancelable: false }
-                );
-            } },
-            { text: 'Cancel', onPress: () => { }, style: 'cancel' },
-        ],
-        { cancelable: false }
+      'Select',
+      'Point operation',
+      [
+        { text: 'Delete',
+          onPress: () => {
+            Alert.alert(
+              'Warning',
+              'Delete current point ?',
+              [
+                { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+                { text: 'OK',
+                  onPress: () => {
+                    const expeditions = realm.objects('Expedition');
+                    const expeditionData =
+                      expeditions.filtered(`id=${this.state.expeditionID}`)[0];
+                    try {
+                      realm.write(() => {
+                        //Delete current point from database
+                        expeditionData.checkPoints.splice(this.checkpointId, 1);
+                      });
+
+                      this.emitRemoveCheckpoint(geolocation.coordinates, true);
+                    } catch (e) {
+                      Alert.alert('Deleting point...', e.toString());
+                    }
+                  } },
+                ],
+                { cancelable: false }
+              );
+        } },
+        { text: 'Move',
+          onPress: () => {
+            const obj = {
+              coordinates: geolocation.coordinates,
+              pointId: this.checkpointId
+            };
+
+            global.refToWebView.emit('move-point', { payload: obj });
+          } },
+        { text: 'Edit',
+          onPress: () => {
+            this.checkpointType = -1; //Read the type from DB
+            this.setState({ modalCheckpointVisible: true });
+          } },
+        //Can not use more then 3 buttons
+        //{text: 'Cancel', onPress: () => {}, style: 'cancel'},
+      ],
+      { cancelable: true }
     );
- }
+  }
+}
 
 pointControlAt(geolocation, datamode) {
-  if (geolocation.accuracy > 25) {
+  if (geolocation.accuracy > 5) { // 5 has to be equal to minAccuracy in index.js
     Alert.alert(
       'Warning',
       'Bad accuracy.\nProceed on your own responsibility ?',
@@ -662,6 +787,148 @@ pointControlAt(geolocation, datamode) {
     );
   } else {
       this.openPointForm(geolocation, datamode);
+  }
+}
+
+saveGeolocation = (trackName, geolocation) => {
+  const expedition = realm.objects('Expedition').filtered(`id=${this.state.expeditionID}`)[0];
+  const allTracks = expedition.tracks;
+  let currTrack;
+
+  const appendTrackPoint = (geoLocation) => {
+    realm.write(() => {
+      currTrack.geoLocations.push(geoLocation);
+    });
+  };
+
+  for (let i = 0; i < allTracks.length; i++) {
+    currTrack = allTracks[i];
+    if (currTrack.trackName === trackName) {
+      try {
+        const newGeolocation = {
+          coordinates: geolocation.coordinates,
+          accuracy: geolocation.accuracy,
+        };
+
+        appendTrackPoint(newGeolocation);
+      } catch (e) {
+        console.log(`Saving geolocation: ${e.toString()}`);
+        Alert.alert('Saving geolocation: ', e.toString());
+      }
+
+      break;
+    }
+  }
+}
+
+saveRegion = (coordinates, zoom) => {
+  const expedition = realm.objects('Expedition').filtered(`id=${this.state.expeditionID}`)[0];
+  try {
+    realm.write(() => {
+      expedition.regionCoordinates = JSON.stringify(coordinates);
+      expedition.regionZoom = zoom;
+    });
+    return true;
+  } catch (e) {
+    Alert.alert('Обновяване координати на регион: ', e.toString());
+    return false;
+  }
+}
+
+saveFeatures = (featuresStr) => {
+  const expedition = realm.objects('Expedition').filtered(`id=${this.state.expeditionID}`)[0];
+  try {
+    realm.write(() => {
+      expedition.regionFeatures = featuresStr;
+    });
+    return true;
+  } catch (e) {
+     return false;
+  }
+}
+
+updateFeatures = (coordinates) => {
+  /*
+  const updateResult =
+  this.loadFeatures(coordinates)
+  .then((result) => {
+    this.features = JSON.stringify({ state: 'loaded', data: result });
+    //Alert.alert('Размер на кеширани  елементи', `${this.features.length} байта`);
+    if (this.saveFeatures(this.features)) {
+      return 'OK';
+    }
+
+    Alert.alert('Обновяване на елементи',
+                'Грешка при записа в локалната база с данни.\n');
+    return 'Fatal';
+  })
+  .catch((err) => {
+      this.features = JSON.stringify({ state: 'empty' });
+      if (err === 'Error400') {
+        return 'Ask';
+      }
+      Alert.alert('Обновяване на елементи', err.toString());
+      return 'Fatal';
+  });
+  return updateResult;
+  */
+  return new Promise((resolve, reject) => {
+    this.loadFeatures(coordinates)
+    .then((result) => {
+      this.features = JSON.stringify({ state: 'loaded', data: result });
+      this.saveFeatures(this.features);
+      Alert.alert('Размер на кеширани елементи', `${this.features.length} байта`);
+      resolve();
+    })
+    .catch((err) => {
+      reject(err);
+    });
+  });
+}
+
+updateRegionCoordsAndFeatures = (regionCoords, regionZoom) => {
+  this.areaParameters.areaCoordinates = regionCoords;
+  this.areaParameters.zoom = regionZoom;
+  //console.log('area polygon point count: ', this.areaParameters.areaCoordinates.length);
+  this.setState({ regionSelected: true });
+  this.regionCoordsChanged = true;
+  if (global.activeExpedition >= 0) {
+    /*
+    let answer = '';
+    const goOn = () => { answer = 'goOn'; };
+    const tryAgain = () => { answer = 'tryAgain'; };
+    do {
+      answer = this.updateFeatures(this.areaParameters.areaCoordinates);
+      if (answer === 'Ask') { // Ask mewn "Parse error"
+        Alert.alert(
+          'Обновяване на елементи',
+          'Грешка при прехвърляне',
+          [
+            { text: 'Отказ', onPress: goOn(), style: 'cancel' },
+            { text: 'Отново', onPress: tryAgain() },
+          ],
+          { cancelable: false }
+        );
+      }
+      console.log('answer', answer);
+    }
+    while (answer !== 'Fatal' && // Communication error
+           answer !== 'goOn' && // Canceled by user
+           answer !== 'OK' // Features saved succesfully
+    );
+    if (answer === 'OK') {
+      this.saveRegion(this.areaParameters.areaCoordinates, this.areaParameters.zoom);
+    }
+    */
+    this.updateFeatures(this.areaParameters.areaCoordinates)
+    .then(() => {
+      if (this.saveRegion(this.areaParameters.areaCoordinates, this.areaParameters.zoom)) {
+        EventRegister.emit('expeditionStateChanged', global.activeExpedition);
+      }
+    })
+    .catch((err) => {
+      Alert.alert('Обновяване на регион и елементи', err.toString());
+    });
   }
 }
 
@@ -678,63 +945,231 @@ editPoint(index) {
   }
 }
 
-messageWebHandler = (jsonObject) => {
-    switch (jsonObject.command) {
-      case 'execute':
-          if (jsonObject.payload.functionName === 'pointControl') {
-              this.checkpointId = jsonObject.payload.checkpointId;
-              this.pointControlAt(jsonObject.payload.geolocation, jsonObject.payload.datamode);
-          }
-          /*
-                  if (jsonObject.payload.functionName === 'saveGeolocation') {
-                      this.saveGeolocation(this.state.trackName, jsonObject.payload.geolocation);
-                  }
-                  if (jsonObject.payload.functionName === 'featureInfo') {
-                      if (jsonObject.payload.featureId !== undefined) {
-                          this.showFeature(jsonObject.payload.featureId);
-                      }
-                  }
-                  if (jsonObject.payload.functionName === 'featureMenu') {
-                      this.showMenu(jsonObject.payload.features);
-                  }
-            */
-          break;
-        default: // 'save-area-coordinates':
-            this.areaParameters.areaCoordinates = jsonObject.payload.areaCoords;
-            this.areaParameters.zoom = jsonObject.payload.zoom;
-            console.log('area polygon point count: ', this.areaParameters.areaCoordinates.length);
-            this.setState({ regionSelected: true });
-            this.regionCoordsChanged = true;
-            break;
+showFeatureFromMenu = (index) => {
+  //console.log('index',index);
+  if (index >= 0) this.showFeature(this.menuItems[index].id);
+  this.setState({	menuVisible: false });
+}
+
+showFeature = (featureId) => {
+  const allExpeditions = realm.objects('Expedition');
+  const selectedExpedition = allExpeditions.filtered(`id=${this.state.expeditionID}`)[0];
+  const featuresJSON = JSON.parse(selectedExpedition.regionFeatures).data;
+  let i;
+  let feature;
+  for (i = 0; i < featuresJSON.length; i++) {
+    if (featuresJSON[i].id === featureId) {
+      feature = featuresJSON[i];
+      break;
+    }
+  }
+  //console.log('feature', feature);
+
+  const versions = realm.objects('AKBdbVersions')[0];
+  const lastIndex = versions.dbVersions.length - 1; //Always use the last db-version
+  const types = versions.dbVersions[lastIndex].types;
+  const typesJSON = JSON.parse(types.strJSON);
+  //console.log('typesJSON',typesJSON);
+
+  let featureType;
+  for (i = 0; i < typesJSON.length; i++) {
+    if (typesJSON[i].id === feature.type) {
+      featureType = typesJSON[i];
+      break;
+    }
+  }
+
+  let msg = '';
+  feature.metadata.map((obj) => {
+    console.log('feature metadata:', obj);
+    // What about obj.type = 'arr' ?
+    if (obj.type === 'int') {
+      msg += `${obj.label}: ${obj.value.toString()}\n`;
+    } else
+      if (obj.type === 'txt' || obj.type === 'dt') {
+        msg += `${obj.label}: ${obj.value}\n`;
       }
+    return null;
+  });
+  Alert.alert(featureType.label, msg);
+
+  // To do: feature.children -> may be recursion
+}
+
+showMenu(featuresAtPixel) {
+  //Create menu with options: all features at tapped pixel
+  //console.log('Features at pixel', featuresAtPixel);
+  const features = featuresAtPixel.features;
+  const featuresCnt = features.length;
+  if (featuresCnt > 0) {
+    //Показва първия feature - само за тест
+    //this.showFeature(features[0].id);
+
+    //Създаване на масив само с идентификаторите на features
+    const featureIds = [];
+    features.map((obj) => {
+      featureIds.push(obj.id);
+      return null;
+    });
+
+    //Прочитане на features за региона на текущата експедиция
+    const allExpeditions = realm.objects('Expedition');
+    const selectedExpedition = allExpeditions.filtered(`id=${this.state.expeditionID}`)[0];
+    const featuresJSON = JSON.parse(selectedExpedition.regionFeatures).data;
+    //Допълване на масива features със свойство typeId (идентификатора на типа на feature)
+    for (let i = 0; i < featuresJSON.length; i++) {
+      const j = featureIds.indexOf(featuresJSON[i].id);
+      if (j >= 0) {
+        features[j].typeId = featuresJSON[i].type;
+      }
+    }
+
+    //Прочитане на типовете features за текущата версия на БД
+    const versions = realm.objects('AKBdbVersions')[0];
+    const lastIndex = versions.dbVersions.length - 1; //Always use the last db-version
+    const types = versions.dbVersions[lastIndex].types;
+    const typesJSON = JSON.parse(types.strJSON);
+    //console.log('typesJSON',typesJSON);
+
+    this.menuItems = [];
+    let ind = 1;
+    features.map((obj) => {
+      let typeLabel = 'Unknown label';
+      for (let i = 0; i < typesJSON.length; i++) {
+        if (typesJSON[i].id === obj.typeId) {
+          typeLabel = typesJSON[i].label;
+          break;
+        }
+      }
+
+      let typeName;
+      if (obj.type === 'Polygon') {
+        typeName = `${obj.type} (id ${obj.id})`;
+      } else {
+        typeName = obj.type;
+      }
+
+      //Variable ind must be used to ensure unique menu items
+      this.menuItems.push({
+        id: obj.id,
+        label: `${ind}: ${typeName} - ${typeLabel}`
+      });
+
+      ind++;
+      return null;
+    });
+    //console.log('menuItems',this.menuItems);
+
+    this.processMenuItem = this.showFeatureFromMenu;
+    this.menuTitle = 'Select feature';
+    this.setState({ menuVisible: true });
+  }
+}
+
+changePointCoordinates = (jsonObject) => {
+  const expeditions = realm.objects('Expedition');
+  const expeditionData = expeditions.filtered(`id=${this.state.expeditionID}`)[0];
+
+  try {
+    realm.write(() => {
+      expeditionData.checkPoints[jsonObject.payload.pointId].geoLocation.coordinates =
+        jsonObject.payload.newCoords;
+    });
+  } catch (e) {
+    Alert.alert('Changing point cordinates...', e.toString());
+  }
+}
+
+startProgress = (caption, indeterminate) => {
+  const showProgressScreen = async () => {
+    await this.setState({ modalProgressVisible: true, indeterminate, progress: 0 });
+  };
+
+  this.progressBarCaption = caption;
+  showProgressScreen();
+}
+
+stopProgress = () => {
+  this.setState({ modalProgressVisible: false, });
+}
+
+messageWebHandler = (jsonObject) => {
+  switch (jsonObject.command) {
+    case 'execute':
+      if (jsonObject.payload.functionName === 'pointControl') {
+          this.checkpointId = jsonObject.payload.checkpointId;
+          this.pointControlAt(jsonObject.payload.geolocation, jsonObject.payload.datamode);
+      }
+      if (jsonObject.payload.functionName === 'saveGeolocation') {
+          this.saveGeolocation(this.trackName, jsonObject.payload.geolocation);
+      }
+      if (jsonObject.payload.functionName === 'featureInfo') {
+          if (jsonObject.payload.featureId !== undefined) {
+              this.showFeature(jsonObject.payload.featureId);
+          }
+      }
+      if (jsonObject.payload.functionName === 'featureMenu') {
+          this.showMenu(jsonObject.payload.features);
+      }
+    break;
+    case 'start-progress':
+			this.startProgress(jsonObject.payload.caption, jsonObject.payload.indeterminate);
+		break;
+		case 'stop-progress':
+			this.stopProgress();
+		break;
+    case 'save-area-coordinates':
+      this.updateRegionCoordsAndFeatures(jsonObject.payload.areaCoords, jsonObject.payload.zoom);
+    break;
+    case 'change-point-coordinates':
+      this.changePointCoordinates(jsonObject);
+		break;
+    case 'set-primary-key':
+		//In this case trackName, but it is the primary key in general
+    //Information from WebView which is the current track
+			this.trackName = jsonObject.payload.trackName;
+      this.setState({ currTrackName: this.trackName });
+		break;
+    case 'clear-expedition-id':
+      global.activeExpedition = -1;
+      this.setState({ expeditionID: -1,
+                      expeditionTitle: 'Няма активно издирване',
+                      currTrackName: '-', });
+      this.deselectExpedition();
+      //this.props.navigation.navigate('SingleExpedition');
+		break;
+    default:
+    break;
+  }
 }
 
 regionCoordsDefinition = (regionCoords) => {
-        let txt;
-        let clr;
-        if (regionCoords.length === 0) {
-            txt = 'UNDEFINED';
-            clr = 'red';
-        } else {
-            txt = 'DEFINED';
-            clr = 'green';
-        }
+  let txt;
+  let clr;
+  if (regionCoords.length === 0) {
+      txt = 'UNDEFINED';
+      clr = 'red';
+  } else {
+      txt = 'DEFINED';
+      clr = 'green';
+  }
 
-        this.setState({
-            regionCoordsStateText: txt,
-            regionCoordsStateColor: clr,
-        });
-    }
+  this.setState({
+      regionCoordsStateText: txt,
+      regionCoordsStateColor: clr,
+  });
+}
 
-
-selectedExpedition = (data) => {
+selectedExpedition = (expeditionData) => {
+    const data = expeditionData;
     if (data.exitState === 'select') {
         this.setState({ expeditionID: data.obj.expeditionId });
         this.readExpeditionTracks(data.obj.expeditionId)
         .then((tracks) => {
+            let tracksCount = tracks.length;
+
             //On the map all points from all tracks are in one layer,
             //so here we are creating array (allTracksCoords) with united coordinates
-            const tracksCount = tracks.length;
             const allTracksCoords = [];
             let currTrackCoords;
             let coords;
@@ -766,6 +1201,7 @@ selectedExpedition = (data) => {
             data.obj.tracks = allTracksCoords;
             data.obj.allTracksData = allTracksData;
 
+            // Preparing to display points on WebView
             this.readExpeditionCheckpoints(data.obj.expeditionId)
             .then((checkpoints) => {
                 const chptsCoords = [];
@@ -799,11 +1235,12 @@ selectedExpedition = (data) => {
                                     newFeature.geometry = currField.value;
                                     processedFeatures.push(newFeature);
                                 }
+                                return null;
                             });
                         //};
                     //};
+                    return null;
                 });
-                //data.obj.regionFeatures = '';
                 data.obj.regionFeatures = {
                     type: 'FeatureCollection',
                     crs: {
@@ -814,9 +1251,76 @@ selectedExpedition = (data) => {
                     },
                     features: processedFeatures
                 };
-                //console.log("Features's data", data.obj.features);
 
                 this.emitTransferExpeditionData(data.obj);
+
+                //Set current track in current expedition
+                //=======================================
+                if (!data.sinchronized) {
+                    const currDate = new Date();
+                    const currDateStr = getFormattedDate(currDate);
+                    let currTrackName = null;
+                    let currTrackInd = -1;
+                    for (let i = 0; i < tracksCount; i++) {
+                        if (getFormattedDate(tracks[i].trackDate) === currDateStr) {
+                            currTrackName = tracks[i].trackName;
+                            currTrackInd = i;
+                            break;
+                        }
+                    }
+                    let trackParams = {};
+                    if (currTrackName === null) {
+                      // Създаване на празен track за текущата дата
+                      currTrackName = `track-${tracksCount + 1}`;
+
+                      //Save empty track in DB
+                      const newTrack = {
+                          trackName: currTrackName,
+                          trackDate: new Date(currDateStr),
+                          geoLocations: [],
+                          photos: [],
+                          featureId: -1,
+                      };
+
+                      const tempTracks = tracks.slice();
+                       try {
+                         realm.write(() => {
+                           tracks.push(newTrack);
+                         });
+                         tracksCount++;
+                       } catch (e) {
+                         console.log('Error on track saving', e.toString());
+                         Alert.alert('Грешка при записване на следа', e.toString());
+                       }
+                       tempTracks.push({
+                         trackName: currTrackName,
+                         trackDate: currDateStr,
+                         geoLocations: [],
+                         photos: [],
+                         featureId: -1,
+                       });
+                       this.setState({ tracks: tempTracks });
+
+                      trackParams = {
+                        emptyTrack: false,
+                        centerAtFirstPoint: true,
+                        trackName: currTrackName,
+                        trackDate: currDateStr,
+                        geoLocations: [],
+                      };
+                    } else {
+                      trackParams = {
+                          emptyTrack: false,
+                          centerAtFirstPoint: true,
+                          trackName: currTrackName,
+                          trackDate: getFormattedDate(tracks[currTrackInd].trackDate),
+                          geoLocations: tracks[currTrackInd].geoLocations,
+                        };
+                    }
+
+                    this.trackName = currTrackName;
+                    global.refToWebView.emit('transferTrackData', { payload: trackParams });
+                }
             })
             .catch((err) => {
                 console.log('read expedition checkpoints', err);
@@ -838,7 +1342,7 @@ selectedExpedition = (data) => {
             global.refToWebView.emit('clear-expedition', { payload: {} });
         }
     }
- }
+}
 
  selectedCheckpoint = (data) => {
      console.log('Close checkpoint data screen ...');
@@ -865,18 +1369,37 @@ emitCreateCheckpoint = (coordinates, accuracy, create) => {
     global.refToWebView.emit('removeCheckpoint', { checkpoint: checkpointData });
  }
 
+ emitProgressEnded = () => {
+   global.refToWebView.emit('progressEnded', {});
+ }
+
  readExpeditionTracks = (expeditionId) => {
    console.log(`readExpeditionTracks ID: ${expeditionId}`);
-     return new Promise((resolve, reject) => {
-         try {
-             const expeditions = realm.objects('Expedition');
-             const expedition = expeditions.filtered(`id=${expeditionId}`)[0];
-             resolve(expedition.tracks);
-         } catch (e) {
-             reject(e);
-         }
-     });
-  }
+   return new Promise((resolve, reject) => {
+       try {
+           const expeditions = realm.objects('Expedition');
+           const expedition = expeditions.filtered(`id=${expeditionId}`)[0];
+
+           // Remove all tracks - only for test
+           // comment this snippet from here ...
+           /*
+           try {
+             realm.write(() => {
+               expedition.tracks = [];
+             });
+           } catch (e) {
+             console.log('Error on track removing', e.toString());
+             Alert.alert('Error on track removing', e.toString());
+           }
+           */
+           // ... to here
+
+           resolve(expedition.tracks);
+       } catch (e) {
+           reject(e);
+       }
+   });
+}
 
 readExpeditionCheckpoints = (expeditionId) => {
     return new Promise((resolve, reject) => {
@@ -950,9 +1473,8 @@ renderCardRegionSelect() {
     return (
       <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
           <View style={thumbnailContainerStyle} >
-            <Icon
-              name={'ios-bookmark'}
-              md={'md-bookmark'}
+            <FontAwesome5Pro
+              name={'bookmark'}
               size={50}
               color={'navy'}
             />
@@ -962,9 +1484,8 @@ renderCardRegionSelect() {
             <Text>{ `Избран регион: ${regionSelected ? 'Успешно избран' : 'Неизбран'}`}</Text>
           </View>
           <TouchableOpacity onPress={() => this.props.navigation.navigate('Home')}>
-            <Icon
-              name={'ios-more'}
-              md={'md-more'}
+            <FontAwesome5Pro
+              name={'pencil-alt'}
               size={50}
               color={'tomato'}
             />
@@ -977,9 +1498,18 @@ renderCardRegionSelect() {
 renderCardTools() {
     return (
       <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
-        {iconBox('Избери регион', 'ios-map', 'navy')}
-        {iconBox('Зареди детайли', 'ios-cloud-download', 'navy')}
-        {iconBox('Качи в АКБ', 'ios-cloud-upload', 'navy')}
+        {iconBox({ light: 'light' }, 'Избери регион', 'map', 'navy', this.onPressSelectRegion)}
+        {iconBox({ light: 'light' }, 'Зареди детайли', 'cloud-download-alt', 'navy', () => {
+          this.updateFeatures(this.areaParameters.areaCoordinates)
+          .then(() => {
+              EventRegister.emit('expeditionStateChanged', global.activeExpedition);
+          })
+          .catch((err) => {
+            Alert.alert('Обновяване на елементи', err.toString());
+          });
+        })}
+        {iconBox({ light: 'light' }, 'Качи в ГИС АКБ', 'cloud-upload-alt', 'navy', () => console.log('hello'))}
+        {iconBox({ light: 'light' }, 'Затвори издирване', 'times', 'tomato', () => global.refToWebView.emit('clear-expedition', { payload: {} }))}
       </Card>
     );
   }
@@ -989,18 +1519,18 @@ renderCardEditExpedition() {
     const { expeditionTitle, startDate, leaderName } = this.state;
     return (
       <Card flexDirection='column' wrapperStyle={{ justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={headerContentStyle} >
             <Text style={headerTextStyle}>{expeditionTitle}</Text>
             <Text>{ `Начало: ${startDate}`}</Text>
             <Text>{ `Ръководител: ${leaderName}`}</Text>
           </View>
           <TouchableOpacity onPress={this.toggleModal}>
-            <Icon
-              name={'ios-more'}
-              md={'md-more'}
-              size={50}
-              color={'tomato'}
+            <FontAwesome5Pro
+              light
+              name={'pencil-alt'}
+              size={30}
+              color={'navy'}
             />
           </TouchableOpacity>
         </View>
@@ -1023,27 +1553,46 @@ renderTracks() {
     }
   }
 
+renderHeader() {
+  return (
+    <HeaderScreen
+      headerText={this.state.expeditionTitle}
+      subheaderText={this.state.currTrackName}
+      closeHandler
+    />
+  );
+}
+
 renderNoSelectedExpedition() {
   return (
     <View style={styles.container}>
-      <View>
-        <Text style={styles.headerMessage}>Не е избрано издирване!</Text>
+      <View style={{ width: '100%' }}>
+        {this.renderHeader()}
       </View>
-      <Button
+      <View style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}>
+        <View>
+          <Text style={styles.headerMessage}>Не е избрано издирване!</Text>
+        </View>
+        <Button
+          large
+          backgroundColor='#03A9F4'
+          leftIcon={{ name: 'ios-bookmarks', type: 'ionicon' }}
+          containerViewStyle={styles.containerButton}
+          title='Стартирай ново издирване'
+          onPress={() => this.props.navigation.navigate('NewExpedition')}
+        />
+        <Button
         large
-        backgroundColor='#03A9F4'
-        leftIcon={{ name: 'ios-bookmarks', type: 'ionicon' }}
-        containerViewStyle={styles.containerButton}
-        title='Стартирай ново издирване'
-        onPress={() => this.props.navigation.navigate('NewExpedition')}
-      />
-      <Button
-      large
-        leftIcon={{ name: 'ios-folder', type: 'ionicon' }}
-        containerViewStyle={styles.containerButton}
-        title='Избери издирване от архива'
-        onPress={() => this.props.navigation.navigate('Expeditions')}
-      />
+          leftIcon={{ name: 'ios-folder', type: 'ionicon' }}
+          containerViewStyle={styles.containerButton}
+          title='Избери издирване от архива'
+          onPress={() => this.props.navigation.navigate({
+              routeName: 'Expeditions',
+              params: {},
+              action: NavigationActions.navigate({ routeName: 'Expeditions' }),
+            })}
+        />
+      </View>
     </View>
   );
 }
@@ -1051,6 +1600,9 @@ renderNoSelectedExpedition() {
 renderSelectedExpedition() {
     return (
       <View>
+        <View style={{ width: '100%' }}>
+          {this.renderHeader()}
+        </View>
         <View>
           {this.renderCardEditExpedition()}
         </View>
@@ -1069,22 +1621,22 @@ renderSelectedExpedition() {
           </Modal>
           { /* Modal panel menu */ }
           <Modal
+              style={{ flex: 1, padding: 0, margin: 0 }}
               isVisible={this.state.menuVisible}
               onShow={() => {}}
               onModalHide={() => {
                     if (this.MenuSelectedItem) {
                     this.setState({ modalCheckpointVisible: true });
+                    this.MenuSelectedItem = false;
                   }
                 }
               }
           >
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} >
-                  <Menu
-                    title={this.menuTitle}
-                    menuItems={this.menuItems}
-                    onSelectMenuItem={this.processMenuItem}
-                  />
-              </View>
+              <Menu
+                title={this.menuTitle}
+                menuItems={this.menuItems}
+                onSelectMenuItem={this.processMenuItem}
+              />
           </Modal>
           { /* Modal panel for check point data */ }
           <Modal
@@ -1101,6 +1653,42 @@ renderSelectedExpedition() {
                   accuracyGPS={this.state.GPSaccuracy}
                   selectedCheckpoint={this.selectedCheckpoint}
               />
+          </Modal>
+          { /* Modal panel for progress bar */ }
+          <Modal
+            animationType="none"
+            transparent={true}
+            visible={this.state.modalProgressVisible}
+            onRequestClose={() => {}}
+          >
+            <View
+              style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(52, 52, 52, 0.5)',
+              paddingVertical: 20,
+              }}
+            >
+              <View style={styles.card}>
+                <Text style={{ fontSize: 15, textAlign: 'center', margin: 10, }}>
+                  {this.progressBarCaption}
+                </Text>
+                <ProgressBar
+                  style={{ margin: 10, }}
+                  width={null}
+                  progress={this.state.progress}
+                  indeterminate={this.state.indeterminate}
+                />
+                <Button
+                  title='Cancel'
+                  onPress={() => {
+                    this.emitProgressEnded();
+                    this.setState({ modalProgressVisible: false });
+                  }}
+                />
+              </View>
+            </View>
           </Modal>
 
         </View>
@@ -1122,7 +1710,8 @@ renderRouter(expSelected) {
 
 render() {
       return (
-        this.renderRouter(this.state.expeditionID)
+        //this.renderRouter(this.state.expeditionID)
+        this.renderRouter(global.activeExpedition)
     );
   }
 }
@@ -1132,7 +1721,6 @@ const styles = {
      flex: 1,
      flexDirection: 'column',
      alignItems: 'center',
-     justifyContent: 'center',
      backgroundColor: 'white',
      margin: 0,
      padding: 0
@@ -1148,6 +1736,7 @@ const styles = {
     color: 'darkslategrey',
   },
   containerIconBox: {
+      flex: 1,
      flexDirection: 'column',
      alignItems: 'center',
      justifyContent: 'center',
@@ -1232,18 +1821,31 @@ const syncYES = 1;
 const syncNOtext = 'Not sinchronized';
 const syncYEStext = 'Sinchronized';
 
-const iconBox = (textLabel, msgIcon, clrIcon) => (
+const iconFAButton = (typeIcon, msgIcon, clrIcon, sizeIcon, underlayColor, onPressHandler, contStyle) => (
+    <TouchableOpacity
+     style={[{ padding: 3, marginRight: 7 }, contStyle]}
+     onPress={onPressHandler}
+    >
+      <FontAwesome5Pro
+        name={msgIcon}
+        size={sizeIcon}
+        color={clrIcon}
+        {...typeIcon}
+      />
+    </TouchableOpacity>
+  );
+
+const iconBox = (typeIcon, textLabel, msgIcon, clrIcon, onPressHandler) => (
     <View style={styles.containerIconBox}>
-      <View>
-        <Icon
-          name={msgIcon}
-          size={40}
-          type='ionicon'
-          color={clrIcon}
-          iconStyle={styles.messageIcon}
-          onPress={() => console.log('hello')}
-        />
-      </View>
+      {iconFAButton(
+          typeIcon,
+          msgIcon,
+          clrIcon,
+          30,
+          'rgba(0, 0, 0, .05)',
+          onPressHandler,
+          styles.messageIcon
+         )}
       <View>
         <Text style={styles.iconLabel}> {textLabel} </Text>
       </View>

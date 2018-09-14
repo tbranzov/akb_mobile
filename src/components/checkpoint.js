@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { StyleSheet, Alert, View, ScrollView, Text, TextInput, TouchableHighlight, } from 'react-native';
-import { Button } from 'react-native-elements';
-import DatePicker from 'react-native-datepicker'
+import { StyleSheet, Alert, View, ScrollView, Text, TextInput, Button, } from 'react-native';
+//import { Button } from 'react-native-elements';
+import DatePicker from 'react-native-datepicker';
 import ModalDropdown from 'react-native-modal-dropdown';
 import { Strong, getPointTypes } from '../components/utilities';
-import { tagsEndpoint } from '../components/constants';
+//import { tagsEndpoint } from '../components/constants';
 
 const disabledFieldBackClr = 'rgba(100,100,100,0.3)';
 const enabledFieldBackClr = 'rgba(0, 0, 255, .05)';
@@ -16,12 +16,12 @@ const placeholderForeClr = 'green';
 //Data mode constants
 const dmNewData = 1;
 const dmEditData = 2;
-const dmViewData = 3;
+//const dmViewData = 3;
 
 //Data mode text constants
 const dmNewDataText = 'New data';
 const dmEditDataText = 'Edit data';
-const dmViewDataText = 'View data';
+//const dmViewDataText = 'View data';
 
 //Data state constants
 const dsNotChanged = 0;
@@ -53,11 +53,21 @@ class AutoExpandingTextInput extends React.Component {
 			this.props.updateSavingMode(text);
         }}
         onContentSizeChange={(event) => {
-            this.setState({ height: event.nativeEvent.contentSize.height })
+          this.setState({ height: event.nativeEvent.contentSize.height });
         }}
-        style={[{flex: 1, textAlign: 'left', backgroundColor: 'rgba(0, 0, 255, .05)', color: 'blue', fontSize: 15, padding:0},
-				{height: Math.max(35, this.state.height)}]
-		}
+        style={
+          [
+            {
+              flex: 1,
+              textAlign: 'left',
+              backgroundColor: 'rgba(0, 0, 255, .05)',
+              color: 'blue',
+              fontSize: 15,
+              padding: 0
+            },
+            { height: Math.max(35, this.state.height) }
+          ]
+        }
         value={this.state.text}
       />
     );
@@ -76,15 +86,15 @@ class CheckpointForm extends Component {
 			dataModeText: '',
 			dataStateText: '',
 			fieldValues: [],
-		}
+		};
 
 		this.inputs = [];
 		this.inputFieldInd = 0;
-		this.expeditionData;
+		this.expeditionData = {};
 		this.focusNextField = this.focusNextField.bind(this);
 		this.setDataChanged = this.setDataChanged.bind(this);
 		this.validInputData = this.validInputData.bind(this);
-		this.saveCheckpoint =this.saveCheckpoint.bind(this);
+		this.saveCheckpoint = this.saveCheckpoint.bind(this);
 		this.onExit = this.onExit.bind(this);
 		this.renderCheckpoint = this.renderCheckpoint.bind(this);
 		this.optTags = []; //Array for the options of the comboboxes
@@ -97,7 +107,7 @@ class CheckpointForm extends Component {
 		this.tagsJSON;
 		this.pointJSON; //Metadata for selected checkpoint
 		*/
-	};
+	}
 
 	componentWillMount() {
 		realm = this.props.realm;
@@ -107,11 +117,12 @@ class CheckpointForm extends Component {
 
 		const expeditions = realm.objects('Expedition');
 		this.expeditionData = expeditions.filtered('id='+this.props.expeditionId.toString())[0];
-		let dmText,dsText;
+		let dmText;
+    let dsText;
 		this.dataState = dsNotChanged;
 		dsText = dsNotChangedText;
 		if (this.props.checkpointInd >= 0) { //Existing checkpoint
-			let menuItems = getPointTypes(realm);
+			const menuItems = getPointTypes(realm);
 
 			const checkpointData = this.expeditionData.checkPoints[this.props.checkpointInd];
 			this.coordinatesGPS = checkpointData.geoLocation.coordinates;
@@ -125,12 +136,12 @@ class CheckpointForm extends Component {
 				existOnMapText: 'YES',
 				fieldValues: this.fieldValues,
 			});
-			for (let i=0; i<menuItems.length; i++) {
-				if (menuItems[i].id == this.checkpointType) {
+			for (let i = 0; i < menuItems.length; i++) {
+				if (menuItems[i].id === this.checkpointType) {
 					this.checkpointTitle = menuItems[i].label;
 					break;
-				};
-			};
+				}
+			}
 		} else {
 			this.dataMode = dmNewData;
 			dmText = dmNewDataText;
@@ -138,33 +149,35 @@ class CheckpointForm extends Component {
 			this.checkpointTitle = this.props.checkpointTitle;
 			this.fieldValues = [];
 
-			if (this.checkpointType == 19) { //checkpoint
-				this.fieldValues = ['0','0','0','0','0'];
+			if (this.checkpointType === 19) { //checkpoint
+				this.fieldValues = ['0', '0', '0', '0', '0'];
 				this.dataState = dsChanged;
 				dsText = dsChangedText;
 			} else {
 				//Define default values
 				this.fieldValues = [
-					this.expeditionData.leaderName,     //Team leader
-					this.expeditionData.expeditionName, //Default project name == Expedition name
+					this.expeditionData.leaderName, //Team leader
+					this.expeditionData.expeditionName,
+          //Default project name == Expedition name
 					new Date()							//Current date
 				];
 				this.dataState = dsChanged;
 				dsText = dsChangedText;
-			};
+			}
 
-			if (this.checkpointType == 18) { //Leader checkpoint
+			if (this.checkpointType === 18) { //Leader checkpoint
 				//Get values from fields of type "select", from the last Leader Checkpoint, for default
 				let previousCheckpointData;
-				let len = this.expeditionData.checkPoints.length;
-				for (let i = len - 1; i>=0 ; i--) {
-					if (this.expeditionData.checkPoints[i].type == 18) {
+				const len = this.expeditionData.checkPoints.length;
+				for (let i = len - 1; i >= 0; i--) {
+					if (this.expeditionData.checkPoints[i].type === 18) {
 						previousCheckpointData = this.expeditionData.checkPoints[i];
-					};
-				};
+					}
+				}
 
-				if (previousCheckpointData != undefined) {
-					let fieldValsOfPChp = JSON.parse(previousCheckpointData.data); //This is an array
+				if (previousCheckpointData !== undefined) {
+          //This is an array
+					const fieldValsOfPChp = JSON.parse(previousCheckpointData.data);
 					this.fieldValues.push(fieldValsOfPChp[3]); //Земеползване
 					this.fieldValues.push(fieldValsOfPChp[4]); //Земна покривка
 					this.fieldValues.push(fieldValsOfPChp[5]); //Стратегия
@@ -177,14 +190,13 @@ class CheckpointForm extends Component {
 
 					//this.dataState = dsChanged;
 					//dsText = dsChangedText;
-				};
-			} else {
-			};
+				}
+			}
 
 			this.setState({
 				fieldValues: this.fieldValues,
 			});
-		};
+		}
 
 		this.setState({
 			dataModeText: dmText,
@@ -193,35 +205,37 @@ class CheckpointForm extends Component {
 		});
 
 		this.versions = realm.objects('AKBdbVersions')[0];
-		this.dbVerIndex = this.versions.dbVersions.length - 1; //Active db version is always the last synchronized version
-		this.dbVerAKB = this.versions.dbVersions[this.dbVerIndex];
+
+    //Active db version is always the last synchronized version
+		this.dbVerIndex = this.versions.dbVersions.length - 1;
+
+    this.dbVerAKB = this.versions.dbVersions[this.dbVerIndex];
 		this.typesJSON = JSON.parse(this.dbVerAKB.types.strJSON);
 		this.tagsJSON = JSON.parse(this.dbVerAKB.tags.strJSON);
-		for(let i=0; i<this.dbVerAKB.points.length; i++) {
+		for (let i = 0; i < this.dbVerAKB.points.length; i++) {
 			//console.log('id=',this.dbVerAKB.points[i].id);
-			if (this.dbVerAKB.points[i].id == this.checkpointType) {
+			if (this.dbVerAKB.points[i].id === this.checkpointType) {
 				this.pointJSON = JSON.parse(this.dbVerAKB.points[i].strJSON);
 				//console.log(this.pointJSON);
-			};
-		};
+			}
+		}
 
 		//console.log('optTags',this.dbVerAKB.optTags);
-		for (let i=0; i<this.pointJSON.length; i++) {
-			let item = this.pointJSON[i];
-			if (item.type == 'txt'  && item.properties.field == 'select') {
-				let tagcode = item.properties.options.tag_code;
+		for (let i = 0; i < this.pointJSON.length; i++) {
+			const item = this.pointJSON[i];
+			if (item.type === 'txt' && item.properties.field === 'select') {
+				const tagcode = item.properties.options.tag_code;
 				let currTag;
-				for (let i=0; i<this.tagsJSON.length; i++) {
-					currTag = this.tagsJSON[i];
-					if (currTag.code == tagcode) {
+        for (let j = 0; j < this.tagsJSON.length; j++) {
+					currTag = this.tagsJSON[j];
+					if (currTag.code === tagcode) {
 						this.optTags = JSON.parse(this.dbVerAKB.optTags);
 						break;
 					}
-				};
-			};
-		};
-
-	};
+				}
+			}
+		}
+	}
 
 	componentDidMount() {
 	}
@@ -249,10 +263,10 @@ class CheckpointForm extends Component {
 		return this.pointJSON.map( (item, index) => {
 			const len = Object.keys(this.pointJSON).length;
 			let inputField = null;
-			if (item.type == 'txt' && item.properties.field == 'text') {
-				let fieldInd = this.inputFieldInd;
+			if (item.type === 'txt' && item.properties.field === 'text') {
+				const fieldInd = this.inputFieldInd;
 				this.inputFieldInd++;
-				let nextFieldInd = this.inputFieldInd;
+				const nextFieldInd = this.inputFieldInd;
 				inputField = <TextInput
 					style={[styles.inputField, {backgroundColor: this.state.inputFieldBackgroundColor},]}
 					editable = {true}
@@ -277,17 +291,17 @@ class CheckpointForm extends Component {
 				/>
 			} else {
 				if (item.type == 'int' && item.properties.field == 'int') {
-					let fieldInd = this.inputFieldInd;
+					const fieldInd = this.inputFieldInd;
 					this.inputFieldInd++;
-					let nextFieldInd = this.inputFieldInd;
+					const nextFieldInd = this.inputFieldInd;
 					inputField = <TextInput
 						style={[styles.inputField, {backgroundColor: this.state.inputFieldBackgroundColor},]}
 						defaultValue={'0'}
 						//editable = {this.state.editNumberOfDays}
-						maxLength = {5}
+						maxLength={5}
 						placeholder={'Please enter...'}
 						placeholderTextColor={this.state.placeholderForegroundColor}
-						blurOnSubmit={ true }
+						blurOnSubmit={true}
 						value={this.state.fieldValues[index]}
 						secureTextEntry={false}
 						autoCorrect={false}
@@ -295,12 +309,12 @@ class CheckpointForm extends Component {
 						keyboardType='numeric'
 						returnKeyType={'next'}
 						underlineColorAndroid='transparent'
-						onFocus={ () => {
-							if (this.dataMode == dmNewData && this.fieldValues[index] == '0') {
+						onFocus={() => {
+							if (this.dataMode === dmNewData && this.fieldValues[index] === '0') {
 								this.fieldValues[index] = '';
 								this.state.fieldValues[index] = '';
 								this.forceUpdate();
-							};
+							}
 						}}
 						onChangeText={ (value) => {
 							this.fieldValues[index] = value;
@@ -388,7 +402,7 @@ class CheckpointForm extends Component {
 									placeholder={'Please enter...'}
 									placeholderTextColor={this.state.placeholderForegroundColor}
 									defaultValue={this.state.fieldValues[index]}
-									blurOnSubmit={ true }
+									blurOnSubmit={true}
 									onChangeText={ value => {
 										Alert.alert('AutoExpandingTextInput','Text changed');
 									}}
@@ -403,16 +417,16 @@ class CheckpointForm extends Component {
 									underlineColorAndroid='transparent'
 								/>
 							} //Полета от типове arr и geo засега не се обработват
-						};
-					};
-				};
-			};
+						}
+					}
+				}
+			}
 
 			return (
 				<View key={index} style={{ flex: 1, }}>
 					{
-						item.type != 'arr' &&
-						item.type != 'geo' &&
+						item.type !== 'arr' &&
+						item.type !== 'geo' &&
 						<Text style={styles.label}>{index+1}. {item.label} {item.properties.required && '*'}</Text>
 					}
 					{inputField}
@@ -488,11 +502,13 @@ class CheckpointForm extends Component {
 		return (
 			<View style={styles.pageContainer}>
 				<View style={styles.cardTitle}>
-					<Text style={styles.cardTitleText}>{this.state.checkpointTitle}</Text>
+					<Text style={styles.cardTitleText}> {this.state.checkpointTitle}</Text>
 				</View>
 				<ScrollView	style={styles.scroll}>
 					<View style={styles.card}>
-						<Text>GPS coordinates : <Strong>{this.coordinatesGPS[0]}, {this.coordinatesGPS[1]}</Strong></Text>
+						<Text>
+              GPS coordinates : <Strong>{this.coordinatesGPS[0]}, {this.coordinatesGPS[1]}</Strong>
+            </Text>
 						<Text>Accuracy : <Strong>{this.accuracyGPS}</Strong></Text>
 
 						{this.renderSeparator()}
@@ -514,12 +530,18 @@ class CheckpointForm extends Component {
 
 					{this.renderSeparator()}
 
-					<View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+					<View
+            style={{
+              marginLeft: 20,
+              marginRight: 20,
+              flexDirection: 'row',
+              justifyContent: 'space-between', }}
+          >
 						<Button
 							title='save'
 							style={styles.button}
 							color='red'
-							disabled={this.dataState == dsNotChanged}
+							disabled={this.dataState === dsNotChanged}
 							titleColor='white'
 							onPress={() => {
 								if (this.validInputData() && this.saveCheckpoint()) {
@@ -529,13 +551,13 @@ class CheckpointForm extends Component {
 										dataModeText: dmEditDataText,
 										dataStateText: dsNotChangedText,
 									});
-								};
+								}
 							}}
 						/>
 						<Button
 							title='remove'
 							style={styles.button}
-							disabled={this.dataMode == dmNewData}
+							disabled={this.dataMode === dmNewData}
 							color='#0277BD'
 							titleColor='yellow'
 							onPress={
@@ -554,15 +576,15 @@ class CheckpointForm extends Component {
 													this.expeditionData.checkPoints.splice(this.props.checkpointInd, 1);
 												});
 
-												let responseJSON = {
+												const responseJSON = {
 													exitState: 'remove',
 													obj: {
 														coordinates: this.coordinatesGPS,
-														remove: this.state.existOnMapText == 'YES'
+														remove: this.state.existOnMapText === 'YES'
 													},
 												};
 												this.onExit(responseJSON);
-											}},
+											} },
 										],
 										{ cancelable: false }
 									);
@@ -572,23 +594,24 @@ class CheckpointForm extends Component {
 						<Button
 							title='exit'
 							style={styles.button}
-							onPress={ () => {
-								let createCheckpoint = this.dataMode == dmEditData && this.state.existOnMapText == 'NO'
-								let responseJSON = {
+							onPress={() => {
+								const createCheckpoint =
+                  this.dataMode === dmEditData && this.state.existOnMapText === 'NO';
+								const responseJSON = {
 									exitState: 'exit',
-									obj: {createCheckpointMark: createCheckpoint},
+									obj: { createCheckpointMark: createCheckpoint },
 								};
 								this.onExit(responseJSON);
 							}}
 							color='#0277BD'
-							titleColor='white' />
+							titleColor='white'
+            />
 					</View>
 				</View>
 
 			</View>
 		);
-	};
-
+	}
 }
 
 const styles = StyleSheet.create({
@@ -615,12 +638,15 @@ const styles = StyleSheet.create({
 	cardTitle: {
 		marginTop: 5,
 		marginBottom: 5,
+    borderRadius: 5,
 	},
 	cardTitleText: {
 		color: 'yellow',
+    backgroundColor: 'black',
 		fontSize: 16,
 		fontWeight: 'bold',
-		marginLeft: 5,
+    marginLeft: 5,
+    marginRight: 5,
 	},
 	label: {
 		backgroundColor: disabledFieldBackClr,

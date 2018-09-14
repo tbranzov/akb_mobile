@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, TouchableOpacity } from 'react-native';
 import Modal from 'react-native-modal';
 import { EventRegister } from 'react-native-event-listeners';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { Card, Button } from 'react-native-elements';
+import FontAwesome5Pro from 'react-native-vector-icons/FontAwesome5Pro';
+import { Card } from 'react-native-elements';
 import { MultiSelectList } from '../components/MultiSelectList';
 import { FormExpedition } from '../components/FormExpedition';
 // функция, която връща следващ идентификатор за запис в базата
@@ -37,41 +37,6 @@ class ExpeditionDetailsScreen extends Component {
   }
 
 componentDidMount() {
-// макетна структура с примерни данни за тест на тракове и точки
-// да се изтрие при внедряване върху устройство
-  const dummyGL1 = {
-      coordinates: [57.15, 43.12, 67.18, 23.31],
-      accuracy: 5,
-  };
-  const dummyGL2 = {
-      coordinates: [47.15, 33.12, 57.18, 13.31],
-      accuracy: 8,
-  };
-  this.setState({
-    tracks: [
-      { trackName: 'Трак 1',
-        trackDate: '2017/12/18',
-        geoLocations: dummyGL1 },
-        { trackName: 'Трак 2',
-          trackDate: '2016/12/19',
-          geoLocations: dummyGL2 },
-          { trackName: 'Трак 3',
-            trackDate: '2017/12/20',
-            geoLocations: dummyGL1 },
-            { trackName: 'Трак 4',
-              trackDate: '2016/12/21',
-              geoLocations: dummyGL2 },
-              { trackName: 'Трак 5',
-                trackDate: '2017/12/22',
-                geoLocations: dummyGL1 },
-                { trackName: 'Трак 6',
-                  trackDate: '2016/12/23',
-                  geoLocations: dummyGL2 },
-    ]
-  });
-  // макетна структура за тест на тракове и точки
-  // да се изтрие при внедряване върху устройство
-
   this.willFocusSubscription =
       this.props.navigation.addListener('willFocus', this.willFocusHandler);
   //лисънър при добиване на фокус, напр. при превключване от таб в таб
@@ -82,37 +47,98 @@ componentWillUnmount() {
 }
 
 willFocusHandler = () => {
-   this.dataCheckID(this.state.expeditionID);
+  //Alert.alert('ExpeditionDetailsScreen', 'willFocusHandler');
+  this.dataCheckID(this.state.expeditionID);
+}
+
+readExpeditionTracks = (expeditionId) => {
+  //console.log(`readExpeditionTracks ID: ${expeditionId}`);
+  return new Promise((resolve, reject) => {
+      try {
+          const expeditions = realm.objects('Expedition');
+          const expedition = expeditions.filtered(`id=${expeditionId}`)[0];
+          resolve(expedition.tracks);
+      } catch (e) {
+          reject(e);
+      }
+  });
 }
 
 dataCheckID(expedition) {
-    //Променя състоянието в зависимост от стойностите в подадения обект
-    const selectedExpedition =
-      realm.objects('Expedition').filtered(`id=${expedition.toString()}`)[0];
-    this.setState({ startDate: getFormattedDate(selectedExpedition.startDate),
-                    leaderName: selectedExpedition.leaderName,
-                    expeditionID: selectedExpedition.id,
-                    expeditionTitle: selectedExpedition.expeditionName,
-     });
+  //Променя състоянието в зависимост от стойностите в подадения обект
+  const selectedExpedition =
+    realm.objects('Expedition').filtered(`id=${expedition.toString()}`)[0];
+
+  const tracks = [];
+  const tracksCnt = selectedExpedition.tracks.length;
+  for (let i = 0; i < tracksCnt; i++) {
+    const track = {};
+    const currTrack = selectedExpedition.tracks[i];
+    track.trackName = currTrack.trackName;
+    track.trackDate = getFormattedDate(currTrack.trackDate);
+    console.log('track.trackDate', track.trackDate);
+    track.geoLocations = currTrack.geoLocations;
+    track.photos = currTrack.photos;
+    track.featureId = currTrack.featureId;
+    tracks.push(track);
+  }
+
+  this.setState({
+    startDate: getFormattedDate(selectedExpedition.startDate),
+    leaderName: selectedExpedition.leaderName,
+    expeditionID: selectedExpedition.id,
+    expeditionTitle: selectedExpedition.expeditionName,
+    tracks
+  });
 }
 
 toggleModalwithDataCheck(expRec) {
-    if (expRec) { // ако е подаден аргумент прави проверка на полето данни и ререндва
-        this.dataCheckID(expRec);
-    }
+  if (expRec) { // ако е подаден аргумент прави проверка на полето данни и ререндва
+      this.dataCheckID(expRec);
+  }
 
-    this.toggleModal();
+  this.toggleModal();
 }
 
 makeActiveExpedition() {
-      global.activeExpedition = this.state.expeditionID;
-      // Указва избраната експедиция като активна
-      EventRegister.emit('expeditionStateChanged', this.state.expeditionID);
-      this.props.navigation.navigate('SingleExpedition', {
-         titleExpedition: this.state.expeditionName,
-         expID: this.state.expeditionID,
-     });
-  }
+  global.activeExpedition = this.state.expeditionID;
+  // Указва избраната експедиция като активна
+  EventRegister.emit('expeditionStateChanged', this.state.expeditionID);
+  this.props.navigation.navigate('SingleExpedition', {
+     titleExpedition: this.state.expeditionName,
+     expID: this.state.expeditionID,
+ });
+}
+
+closeActiveExpedition() {
+  Alert.alert(
+		'Приключване на издирването',
+		'След приключване, данните за издирването записани на това устройство ще са достъпни САМО за разглеждане !\n Моля, потвърдете.',
+		[
+			//{text: 'Ask me later', onPress: () => console.log('Ask me later pressed')},
+			{ text: 'Cancel', onPress: () => {}, style: 'cancel' },
+      {
+        text: 'OK',
+        onPress: () => {
+          const expeditions = realm.objects('Expedition');
+          const expedition = expeditions.filtered(`id=${this.state.expeditionID}`)[0];
+
+          try {
+            realm.write(() => {
+              expedition.sinchronized = true;
+            });
+            EventRegister.emit('expeditionStateChanged', this.state.expeditionID);
+          } catch (e) {
+            console.log('Error', e.toString());
+            Alert.alert('Грешка при приключване на издирването!',
+              e.message.toString());
+          }
+        }
+      },
+    ],
+    { cancelable: false }
+  );
+}
 
 // Превключва модален прозорец
 toggleModal = () =>
@@ -130,40 +156,40 @@ renderModalEditExpedition() {
   );
 }
 
-// Рендва карта за зареждане на фичърите от региона
-renderCardTools() {
-   return (
-     <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
-       {iconBox('Направи активна', 'ios-bookmarks', 'navy', this.makeActiveExpedition.bind(this))}
-       {iconBox('Качи в АКБ', 'ios-cloud-upload', 'navy')}
-       {iconBox('Запази промените', 'ios-archive', 'navy')}
-     </Card>
-   );
- }
+  // Рендва карта с инструментални бутони
+  renderCardTools() {
+      return (
+        <Card flexDirection='row' wrapperStyle={{ justifyContent: 'space-between' }}>
+          {iconBox({ light: 'light' }, 'Направи активно', 'play', 'navy', this.makeActiveExpedition.bind(this))}
+          {iconBox({ light: 'light' }, 'Качи в ГИС АКБ', 'cloud-upload-alt', 'navy', () => console.log('hello'))}
+          {iconBox({ light: 'light' }, 'Приключи издирване', 'archive', 'tomato', () => this.closeActiveExpedition.bind(this))}
+        </Card>
+      );
+    }
 
-// Рендва карта за вход във формата за редактиране на данните за издиравне
-renderCardEditExpedition() {
-    const { expeditionTitle, startDate, leaderName } = this.state;
-    return (
-      <Card flexDirection='column' wrapperStyle={{ justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <View style={headerContentStyle} >
-            <Text style={headerTextStyle}>{expeditionTitle}</Text>
-            <Text>{ `Начало: ${startDate}`}</Text>
-            <Text>{ `Ръководител: ${leaderName}`}</Text>
+  // Рендва карта за вход във формата за редактиране на данните за издиравне
+  renderCardEditExpedition() {
+      const { expeditionTitle, startDate, leaderName } = this.state;
+      return (
+        <Card flexDirection='column' wrapperStyle={{ justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={headerContentStyle} >
+              <Text style={headerTextStyle}>{expeditionTitle}</Text>
+              <Text>{ `Начало: ${startDate}`}</Text>
+              <Text>{ `Ръководител: ${leaderName}`}</Text>
+            </View>
+            <TouchableOpacity onPress={this.toggleModal}>
+              <FontAwesome5Pro
+                light
+                name={'pencil-alt'}
+                size={30}
+                color={'navy'}
+              />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={this.toggleModal}>
-            <Icon
-              name={'ios-more'}
-              md={'md-more'}
-              size={50}
-              color={'tomato'}
-            />
-          </TouchableOpacity>
-        </View>
-      </Card>
-    );
-  }
+        </Card>
+      );
+    }
 
 renderTracks() {
     if (this.state.tracks) {
@@ -232,6 +258,7 @@ const styles = {
     color: 'darkslategrey',
   },
   containerIconBox: {
+      flex: 1,
      flexDirection: 'column',
      alignItems: 'center',
      justifyContent: 'center',
@@ -298,23 +325,35 @@ const { headerContentStyle,
         contentViewStyle
 } = styles;
 
+const iconFAButton = (typeIcon, msgIcon, clrIcon, sizeIcon, underlayColor, onPressHandler, contStyle) => (
+    <TouchableOpacity
+     style={[{ padding: 3, marginRight: 7 }, contStyle]}
+     onPress={onPressHandler}
+    >
+      <FontAwesome5Pro
+        name={msgIcon}
+        size={sizeIcon}
+        color={clrIcon}
+        {...typeIcon}
+      />
+    </TouchableOpacity>
+  );
 
-const iconBox = (textLabel, msgIcon, clrIcon, onPressHandler) => (
-   <View style={styles.containerIconBox}>
-     <View>
-       <Icon
-         name={msgIcon}
-         size={40}
-         type='ionicon'
-         color={clrIcon}
-         iconStyle={styles.messageIcon}
-         onPress={onPressHandler}
-       />
-     </View>
-     <View>
-       <Text style={styles.iconLabel}> {textLabel} </Text>
-     </View>
-   </View>
- );
+const iconBox = (typeIcon, textLabel, msgIcon, clrIcon, onPressHandler) => (
+    <View style={styles.containerIconBox}>
+      {iconFAButton(
+          typeIcon,
+          msgIcon,
+          clrIcon,
+          30,
+          'rgba(0, 0, 0, .05)',
+          onPressHandler,
+          styles.messageIcon
+         )}
+      <View>
+        <Text style={styles.iconLabel}> {textLabel} </Text>
+      </View>
+    </View>
+  );
 
 export { ExpeditionDetailsScreen };

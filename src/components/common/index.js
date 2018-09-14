@@ -1,3 +1,4 @@
+export * from './HeaderScreen';
 export * from './Button';
 export * from './Card';
 export * from './CardSection';
